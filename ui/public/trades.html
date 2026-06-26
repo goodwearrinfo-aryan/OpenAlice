@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OPENALICE · TRADES &lt;GO&gt;</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--amberdim:#9c6f1e;--white:#eaeaea;
+        --grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);
+       font:13px/1.35 'SF Mono','Consolas','Menlo','Monaco','Courier New',monospace}
+  .top{display:flex;align-items:center;gap:12px;background:#000;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  .cmd{color:var(--amberdim)}.cmd b{color:var(--amber)}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--grn)}
+  .blink{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:bl 1.1s steps(2,end) infinite}
+  @keyframes bl{50%{opacity:.15}}
+  .strip{display:flex;border-bottom:1px solid var(--line)}
+  .st{padding:7px 16px;border-right:1px solid var(--line)}.st .l{color:var(--cyan);font-size:11px}.st .v{color:var(--white);font-weight:700}
+  table{width:100%;border-collapse:collapse}
+  th{color:var(--cyan);text-align:left;text-transform:uppercase;font-size:11px;font-weight:400;letter-spacing:.5px;
+     padding:5px 12px;border-bottom:1px solid var(--orange);position:sticky;top:0;background:#000}
+  th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:3px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tr:hover td{background:#0e0b03}
+  tr.flash td{background:#15100400}
+  .BUY{color:var(--grn);font-weight:700}.SELL{color:var(--red);font-weight:700}
+  .acct{color:var(--amber)}.dim{color:var(--dim)}.t{color:var(--amberdim)}
+  .foot{border-top:1px solid var(--orange);color:var(--amberdim);padding:7px 12px;font-size:11px;display:flex;gap:22px}
+  a{color:var(--cyan);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">OPENALICE</span>
+  <span class="cmd">TRADES &lt;<b>GO</b>&gt; &nbsp; LIVE ORDER BLOTTER — EVERY FILL THE BOTS TAKE</span>
+  <span class="live"><span class="blink"></span><span id="ts">--:--:--</span></span>
+</div>
+<div class="strip" id="strip"></div>
+<table>
+  <thead><tr><th>TIME</th><th>ACCOUNT</th><th>SIDE</th><th class="r">QTY</th><th>SYMBOL</th><th>TYPE</th><th>STATUS</th><th>NOTE</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="8" class="dim">connecting feed…</td></tr></tbody>
+</table>
+<div class="foot"><span>newest first · paper fills · auto-refresh 2s</span><span><a href="/chart.html">CHART</a> · <a href="/pipeline.html">PIPELINE</a> · <a href="/tournament.html">TOURNAMENT</a></span></div>
+<script>
+async function tick(){
+  let d; try{ d=await (await fetch('/trades.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
+  document.getElementById('ts').textContent=(d.ts||'').slice(11);
+  const buys=d.trades.filter(t=>t.side==='BUY').length, sells=d.trades.length-buys;
+  const accts=new Set(d.trades.map(t=>t.acct)).size;
+  document.getElementById('strip').innerHTML=[
+    ['TOTAL ORDERS',d.count],['SHOWING',d.trades.length],['BUYS',buys],['SELLS',sells],['ACCOUNTS',accts],
+  ].map(([l,v])=>`<div class="st"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+  document.getElementById('rows').innerHTML=d.trades.map(t=>`
+    <tr><td class="t">${(t.t||'').slice(11,19)}</td>
+      <td class="acct">${t.acct}<span class="dim"> ·${t.inst}</span></td>
+      <td><span class="${t.side}">${t.side||''}</span></td>
+      <td class="r">${t.qty||''}</td>
+      <td>${t.sym||''}</td>
+      <td class="dim">${t.type||''}</td>
+      <td class="${t.status==='filled'?'':'dim'}">${t.status||''}</td>
+      <td class="dim">${t.msg||''}</td></tr>`).join('') || '<tr><td colspan=8 class=dim>no trades yet</td></tr>';
+}
+tick(); setInterval(tick,2000);
+</script>
+</body>
+</html>

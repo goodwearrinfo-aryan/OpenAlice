@@ -24,17 +24,41 @@
   </head>
   <body class="h-full bg-bg text-text">
     <div id="root"></div>
-    <!-- Pipeline portal launcher (static, injected outside the React root — reversible) -->
-    <div id="oa-portal" style="position:fixed;right:14px;bottom:14px;z-index:99999;display:flex;gap:6px;font:700 11px 'SF Mono','Consolas','Menlo',monospace;letter-spacing:.5px">
-      <a href="/chart.html" title="BTC candlestick terminal — OHLC, volume, EMA, crosshair"
-         style="text-decoration:none;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">📈 CHART</a>
-      <a href="/tournament.html" title="Live strategy competition — who wins"
-         style="text-decoration:none;color:#000;background:#ff7a00;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">WHO WINS ▸</a>
-      <a href="/pipeline.html" title="All legs · agents · jobs — live"
-         style="text-decoration:none;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">PIPELINE</a>
-      <a href="/legs.html" title="Candle legs — live win-rate"
-         style="text-decoration:none;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">LEGS</a>
+    <!-- Portal launcher + in-app dashboard drawer (static, outside React root — reversible, zero TS risk) -->
+    <div id="oa-portal" style="position:fixed;right:14px;bottom:14px;z-index:100000;display:flex;gap:6px;font:700 11px 'SF Mono','Consolas','Menlo',monospace;letter-spacing:.5px">
+      <button onclick="oaPanel('/chart.html','LIVE CHART · BTC/ETH/SOL')" title="Live streaming chart"
+         style="cursor:pointer;color:#000;background:#ff7a00;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5);font:inherit">📈 CHART</button>
+      <button onclick="oaPanel('/tournament.html','TOURNAMENT · WHO WINS')" title="Strategy competition"
+         style="cursor:pointer;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5);font:inherit">WHO WINS</button>
+      <button onclick="oaPanel('/trades.html','TRADES · LIVE BLOTTER')" title="Every order the bots take"
+         style="cursor:pointer;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5);font:inherit">TRADES</button>
+      <button onclick="oaPanel('/pipeline.html','PIPELINE · ALL LEGS')" title="Legs · agents · jobs"
+         style="cursor:pointer;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5);font:inherit">PIPELINE</button>
+      <button onclick="oaPanel('/legs.html','CANDLE LEGS')" title="Candle leg win-rates"
+         style="cursor:pointer;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5);font:inherit">LEGS</button>
     </div>
+    <div id="oa-drawer" style="position:fixed;left:0;right:0;bottom:0;height:74vh;z-index:99999;display:none;flex-direction:column;background:#000;border-top:2px solid #ff7a00;box-shadow:0 -12px 50px rgba(0,0,0,.7)">
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid #1e2533;font:700 12px 'SF Mono','Consolas',monospace;color:#ffa028;letter-spacing:.5px">
+        <span style="background:#ff7a00;color:#000;padding:2px 8px">OPENALICE</span>
+        <span id="oa-drawer-title">LIVE CHART</span>
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <a id="oa-pop" href="#" target="_blank" title="Open full page" style="text-decoration:none;color:#37b6ff;border:1px solid #1e2533;padding:4px 10px">↗ FULL</a>
+          <button onclick="oaPanel()" style="cursor:pointer;background:#131722;color:#ffa028;border:1px solid #ff7a00;padding:4px 12px;font:inherit">✕ CLOSE</button>
+        </span>
+      </div>
+      <iframe id="oa-frame" src="about:blank" title="dashboard" style="flex:1;width:100%;border:0;background:#000"></iframe>
+    </div>
+    <script>
+      function oaPanel(url,title){
+        var d=document.getElementById('oa-drawer'),f=document.getElementById('oa-frame');
+        if(!url){ d.style.display='none'; f.src='about:blank'; return; }
+        document.getElementById('oa-drawer-title').textContent=title||'';
+        document.getElementById('oa-pop').href=url;
+        if(f.getAttribute('src')!==url) f.src=url;
+        d.style.display='flex';
+      }
+      document.addEventListener('keydown',function(e){ if(e.key==='Escape') oaPanel(); });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

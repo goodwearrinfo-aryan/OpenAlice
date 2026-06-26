@@ -64,12 +64,12 @@
 </div>
 <script>
 const C=document.getElementById('c'), X=C.getContext('2d');
-let DATA=[], INTERVAL='1h', SYMBOL='BTC', HOVER=-1;
-const PERIODS=['15m','1h','4h','1d'], SYMBOLS=['BTC','ETH','SOL'];
+let DATA=[], INTERVAL='1h', SYMBOL='BTC', HOVER=-1, TRADES=[];
+const PERIODS=['15m','1h','4h','1d'], SYMBOLS=['BTC','ETH','SOL'], BARMS={'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
 const TAPE=['BTC','ETH','SOL','BNB','XRP','DOGE','ADA','AVAX'], tdata={};
 const SY=document.getElementById('symbols');
 SY.innerHTML=SYMBOLS.map(s=>`<button class="${s===SYMBOL?'on':''}" data-s="${s}">${s}</button>`).join('');
-SY.onclick=e=>{const s=e.target.dataset.s; if(s&&s!==SYMBOL){const o=SYMBOL; SYMBOL=s; document.querySelectorAll('#symbols button').forEach(b=>b.classList.toggle('on',b.dataset.s===s)); document.getElementById('tkr').textContent=s+'USD'; switchStream(o,INTERVAL,s,INTERVAL); load();}};
+SY.onclick=e=>{const s=e.target.dataset.s; if(s&&s!==SYMBOL){const o=SYMBOL; SYMBOL=s; document.querySelectorAll('#symbols button').forEach(b=>b.classList.toggle('on',b.dataset.s===s)); document.getElementById('tkr').textContent=s+'USD'; switchStream(o,INTERVAL,s,INTERVAL); load(); loadTrades();}};
 document.getElementById('periods').innerHTML=PERIODS.map(p=>`<button class="${p===INTERVAL?'on':''}" data-p="${p}">${p}</button>`).join('');
 document.getElementById('periods').onclick=e=>{const p=e.target.dataset.p; if(p&&p!==INTERVAL){const o=INTERVAL; INTERVAL=p; document.querySelectorAll('#periods button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); switchStream(SYMBOL,o,SYMBOL,p); load();}};
 function renderTape(){
@@ -144,6 +144,15 @@ function draw(){
   [[20,'#ffa028'],[50,'#37b6ff']].forEach(([p,col])=>{const e=ema(cl,p);
     X.strokeStyle=col; X.lineWidth=1.2; X.beginPath(); let started=false;
     e.forEach((v,i)=>{if(v==null)return; const x=xC(i),y=Y(v); if(!started){X.moveTo(x,y);started=true;}else X.lineTo(x,y);}); X.stroke();});
+  // trade markers — the actual BUY/SELL orders the bots take (this symbol), placed by exact time within the bar
+  if(DATA.length>1){ const bm=BARMS[INTERVAL]||36e5, t0=DATA[0].t, tN=DATA[DATA.length-1].t+bm;
+    for(const tr of TRADES){ const ms=Date.parse(tr.t); if(isNaN(ms)||ms<t0||ms>tN)continue;
+      let bi=DATA.length-1; for(let i=DATA.length-1;i>=0;i--){ if(DATA[i].t<=ms){bi=i;break;} }
+      const x=LF+bi*cw+Math.max(0,Math.min(1,(ms-DATA[bi].t)/bm))*cw, buy=tr.side==='BUY';
+      X.fillStyle=buy?'#46e34a':'#ff4d4d';
+      const y=buy?Y(DATA[bi].l)+7:Y(DATA[bi].h)-7, base=buy?y+6:y-6;
+      X.beginPath(); X.moveTo(x,y); X.lineTo(x-3.5,base); X.lineTo(x+3.5,base); X.closePath(); X.fill(); }
+  }
   // last price line + tag
   const lp=DATA[DATA.length-1].c, prev=DATA[DATA.length-2]?.c??lp, up=lp>=prev, y=Y(lp);
   X.strokeStyle=up?'#2bd96b':'#ff4d4d'; X.setLineDash([3,3]); X.lineWidth=1;
@@ -196,7 +205,9 @@ function connect(){
   WS.onclose=()=>setTimeout(connect,1500);          // auto-reconnect
   WS.onerror=()=>{try{WS.close();}catch(_){}};
 }
-load().then(connect); setInterval(load,60000);      // WS = live; REST resync hourly-bar history each 60s to self-heal gaps
+async function loadTrades(){ try{ const j=await (await fetch('/trades.json?_='+Date.now())).json(); TRADES=(j.trades||[]).filter(t=>t.sym===SYMBOL).slice(0,40); schedule(); }catch(e){} }
+load().then(connect); setInterval(load,60000);      // WS = live; REST resync history each 60s to self-heal gaps
+loadTrades(); setInterval(loadTrades,5000);          // overlay the bots' BUY/SELL orders on the chart
 </script>
 </body>
 </html>
