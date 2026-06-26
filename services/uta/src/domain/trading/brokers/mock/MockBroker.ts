@@ -923,16 +923,12 @@ export class MockBroker implements IBroker {
     const existing = this._positions.get(key)
 
     if (!existing) {
-      if (side === 'SELL') {
-        // No position to sell. Real brokers reject oversell. Mock follows
-        // suit — flipping into a short here would silently fabricate cash
-        // and a wrong-direction position. Caller (placeOrder / externalTrade)
-        // catches and surfaces the rejection.
-        throw new Error(`MockBroker[${this.id}]: cannot SELL ${qty.toFixed()} ${key} — no existing position`)
-      }
+      // PATCHED (oa scalper, paper-only): allow opening SHORTS. BUY opens long,
+      // SELL opens short — mirrors externalTrade's open-short path. Enables the
+      // scalper's short side. placeOrder's cash line (SELL credits) handles it.
       this._positions.set(key, {
         contract,
-        side: 'long',
+        side: side === 'SELL' ? 'short' : 'long',
         quantity: qty,
         avgCost: price,
       })

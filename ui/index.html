@@ -24,6 +24,17 @@
   </head>
   <body class="h-full bg-bg text-text">
     <div id="root"></div>
+    <!-- Pipeline portal launcher (static, injected outside the React root — reversible) -->
+    <div id="oa-portal" style="position:fixed;right:14px;bottom:14px;z-index:99999;display:flex;gap:6px;font:700 11px 'SF Mono','Consolas','Menlo',monospace;letter-spacing:.5px">
+      <a href="/chart.html" title="BTC candlestick terminal — OHLC, volume, EMA, crosshair"
+         style="text-decoration:none;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">📈 CHART</a>
+      <a href="/tournament.html" title="Live strategy competition — who wins"
+         style="text-decoration:none;color:#000;background:#ff7a00;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">WHO WINS ▸</a>
+      <a href="/pipeline.html" title="All legs · agents · jobs — live"
+         style="text-decoration:none;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">PIPELINE</a>
+      <a href="/legs.html" title="Candle legs — live win-rate"
+         style="text-decoration:none;color:#ffa028;background:#000;border:1px solid #ff7a00;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.5)">LEGS</a>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

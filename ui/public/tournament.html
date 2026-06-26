@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OPENALICE · TOURNAMENT &lt;GO&gt;</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--amberdim:#9c6f1e;--white:#eaeaea;
+        --grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818;--hi:#1a1305}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);
+       font:13px/1.35 'SF Mono','Consolas','Menlo','Monaco','Courier New',monospace}
+  .top{display:flex;align-items:center;gap:12px;background:#000;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  .cmd{color:var(--amberdim);letter-spacing:.5px}.cmd b{color:var(--amber)}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--grn)}
+  .blink{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:bl 1.1s steps(2,end) infinite}
+  @keyframes bl{50%{opacity:.15}}
+  .strip{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .st{padding:7px 16px;border-right:1px solid var(--line)}
+  .st .l{color:var(--cyan);font-size:11px;letter-spacing:.5px}
+  .st .v{color:var(--white);font-weight:700}
+  .sect{color:var(--orange);text-transform:uppercase;letter-spacing:1.5px;font-size:12px;
+        padding:9px 12px 5px;border-left:3px solid var(--orange);margin-top:6px}
+  table{width:100%;border-collapse:collapse}
+  th{color:var(--cyan);text-align:left;text-transform:uppercase;font-size:11px;font-weight:400;
+     letter-spacing:.5px;padding:5px 12px;border-bottom:1px solid var(--orange);position:sticky;top:0;background:#000}
+  th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:4px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tr:hover td{background:#0e0b03}
+  tr.lead td{background:var(--hi);color:var(--white)}
+  tr.lead .nm{color:var(--white);font-weight:700}
+  .rk{color:var(--amberdim)} .nm{color:var(--amber)} .tag{color:var(--dim);font-size:11px}
+  .pos{color:var(--grn)}.neg{color:var(--red)}.dim{color:var(--dim)}
+  .EDGE{color:var(--grn);font-weight:700}.DIR{color:var(--dim)}.BOT{color:var(--cyan);font-weight:700}
+  .pill{color:var(--grn)}.pillS{color:var(--red)}.pillF{color:var(--dim)}
+  .foot{border-top:1px solid var(--orange);color:var(--amberdim);padding:7px 12px;font-size:11px;display:flex;gap:22px;flex-wrap:wrap}
+  .foot b{color:var(--amber)} a{color:var(--cyan);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">OPENALICE</span>
+  <span class="cmd">TOURNAMENT &lt;<b>GO</b>&gt; &nbsp; WHO WINS · LIVE FORWARD P&amp;L</span>
+  <span class="live"><span class="blink"></span><span id="ts">--:--:--</span></span>
+</div>
+<div class="strip" id="strip"></div>
+<div class="sect">Strategy Leaderboard</div>
+<table>
+  <thead><tr><th>#</th><th>STRATEGY</th><th>TYPE</th><th>POS</th><th class="r">RETURN</th><th class="r">WIN%</th><th class="r">CYC</th></tr></thead>
+  <tbody id="board"><tr><td colspan="7" class="dim">connecting feed…</td></tr></tbody>
+</table>
+<div class="foot">
+  <span>STATUS <b id="leader">—</b></span>
+  <span>EDGE = structural (real +EV) · DIR = directional (coin-flip)</span>
+  <span>WATCH <b>WIN%</b> OVER DAYS, NOT RANK OVER SECONDS</span>
+  <span><a href="/pipeline.html">PIPELINE</a> · <a href="/legs.html">LEGS</a></span>
+</div>
+<script>
+const f2=n=>{const x=Number(n);return (x>0?'+':'')+x.toFixed(3)+'%'};
+const cls=n=>Number(n)>0?'pos':(Number(n)<0?'neg':'dim');
+const pc=p=>p==='LONG'||p==='active'?'pill':p==='SHORT'?'pillS':'pillF';
+async function tick(){
+  let d; try{ d=await (await fetch('/tournament.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
+  document.getElementById('ts').textContent=(d.ts||'').slice(11);
+  document.getElementById('leader').textContent=(d.board[0]?.smart?'EDGE LEG ':'NOISE LEG ')+d.leader+' LEADING';
+  document.getElementById('strip').innerHTML=[
+    ['BTC','$'+(+d.btc).toLocaleString()],['ETH','$'+(+d.eth).toLocaleString()],
+    ['BTC FUND',(d.funding_btc*100).toFixed(4)+'%'],['ETH FUND',(d.funding_eth*100).toFixed(4)+'%'],
+    ['PAIRS Z',(d.pairs_z>0?'+':'')+d.pairs_z],['CYCLES',d.cycles],['LEADER',d.leader.toUpperCase()],
+  ].map(([l,v])=>`<div class="st"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+  document.getElementById('board').innerHTML=d.board.map((b,i)=>`
+    <tr class="${i===0?'lead':''}">
+      <td class="rk">${String(i+1).padStart(2,'0')}</td>
+      <td class="nm">${b.name}</td>
+      <td><span class="${b.real?'BOT':b.smart?'EDGE':'DIR'}">${b.real?'BOT':b.smart?'EDGE':'DIR'}</span></td>
+      <td><span class="${pc(b.pos)}">${b.pos.toUpperCase()}</span> <span class="tag">${b.tag}</span></td>
+      <td class="r ${cls(b.ret_pct)}">${f2(b.ret_pct)}</td>
+      <td class="r">${b.winpct.toFixed(1)}</td>
+      <td class="r dim">${b.cyc}</td>
+    </tr>`).join('');
+}
+tick(); setInterval(tick,3000);
+</script>
+</body>
+</html>

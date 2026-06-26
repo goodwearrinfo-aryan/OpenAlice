@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OPENALICE · LEGS &lt;GO&gt;</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--amberdim:#9c6f1e;--white:#eaeaea;
+        --grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);
+       font:13px/1.35 'SF Mono','Consolas','Menlo','Monaco','Courier New',monospace}
+  .top{display:flex;align-items:center;gap:12px;background:#000;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  .cmd{color:var(--amberdim)}.cmd b{color:var(--amber)}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--grn)}
+  .blink{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:bl 1.1s steps(2,end) infinite}
+  @keyframes bl{50%{opacity:.15}}
+  .strip{display:flex;border-bottom:1px solid var(--line)}
+  .st{padding:7px 16px;border-right:1px solid var(--line)}
+  .st .l{color:var(--cyan);font-size:11px}.st .v{color:var(--white);font-weight:700;font-size:15px}
+  .sect{color:var(--orange);text-transform:uppercase;letter-spacing:1.5px;font-size:12px;padding:8px 12px 4px;border-left:3px solid var(--orange)}
+  table{width:100%;border-collapse:collapse}
+  th{color:var(--cyan);text-align:left;text-transform:uppercase;font-size:11px;font-weight:400;padding:5px 12px;border-bottom:1px solid var(--orange)}
+  th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:6px 12px;border-bottom:1px solid var(--line)}
+  tr:hover td{background:#0e0b03}
+  .nm{color:var(--amber)}.pos{color:var(--grn)}.neg{color:var(--red)}.dim{color:var(--dim)}
+  .pl{color:var(--grn)}.fl{color:var(--dim)}
+  .bar{height:5px;background:#141414;margin-top:4px;width:90px}.bar>i{display:block;height:100%;background:var(--orange)}
+  .foot{border-top:1px solid var(--orange);color:var(--amberdim);padding:7px 12px;font-size:11px;display:flex;gap:22px;flex-wrap:wrap}
+  a{color:var(--cyan);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">OPENALICE</span>
+  <span class="cmd">CANDLE LEGS &lt;<b>GO</b>&gt; &nbsp; LIVE WIN-RATE · LONG/FLAT</span>
+  <span class="live"><span class="blink"></span><span id="ts">--:--:--</span></span>
+</div>
+<div class="strip" id="strip"></div>
+<div class="sect">Candle Legs — Own Sim Account Each</div>
+<table>
+  <thead><tr><th>LEG</th><th>POS</th><th class="r">LIVE WIN%</th><th class="r">CLOSED</th><th class="r">BACKTEST</th><th class="r">NLV</th><th class="r">uPnL</th></tr></thead>
+  <tbody id="legs"><tr><td colspan="7" class="dim">connecting feed…</td></tr></tbody>
+</table>
+<div class="foot">
+  <span>HONEST: BACKTEST 46–57% (COIN-FLIP), NOT 79% · LONG/FLAT ONLY (MOCK CAN'T SHORT)</span>
+  <span><a href="/tournament.html">TOURNAMENT</a> · <a href="/pipeline.html">PIPELINE</a></span>
+</div>
+<script>
+const f=n=>{const x=Number(n);return isFinite(x)?x.toLocaleString(undefined,{maximumFractionDigits:0}):n};
+const f2=n=>{const x=Number(n);return isFinite(x)?(x>0?'+':'')+x.toFixed(2):n};
+async function tick(){
+  let d; try{ d=await (await fetch('/legs.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
+  document.getElementById('ts').textContent=(d.ts||'').slice?(''+d.ts).slice(0,8):d.ts;
+  document.getElementById('strip').innerHTML=`<div class="st"><div class="l">BTC</div><div class="v">$${f(d.btc)}</div></div>
+    <div class="st"><div class="l">LEGS</div><div class="v">${(d.legs||[]).length}</div></div>`;
+  document.getElementById('legs').innerHTML=(d.legs||[]).map(l=>{const n=l.wins+l.losses, up=Number(l.upnl)||0;
+    return `<tr>
+      <td class="nm">${l.leg}</td>
+      <td><span class="${l.pos==='LONG'?'pl':'fl'}">${l.pos.toUpperCase()}</span></td>
+      <td class="r">${l.winpct}%<div class="bar"><i style="width:${Math.max(0,Math.min(100,l.winpct))}%"></i></div></td>
+      <td class="r dim">${l.wins}/${n}</td>
+      <td class="r dim">${l.backtest}%</td>
+      <td class="r">$${f(l.nlv)}</td>
+      <td class="r ${up>0?'pos':up<0?'neg':'dim'}">${(up>0?'+':'')}$${f2(up)}</td>
+    </tr>`;}).join('')||'<tr><td colspan=7 class=dim>no data</td></tr>';
+}
+tick(); setInterval(tick,3000);
+</script>
+</body>
+</html>
