@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Funding Carry — OpenAlice</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ body{background:#0b0e14;color:#cdd6f4;font:14px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:20px}
+ h1{font-size:18px;margin:0 0 4px}.sub{color:#7f849c;font-size:12px;margin-bottom:16px}
+ .cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+ .card{background:#11141c;border:1px solid #1e2230;border-radius:10px;padding:12px 16px;min-width:120px}
+ .card .k{color:#7f849c;font-size:11px;text-transform:uppercase}.card .v{font-size:20px;margin-top:3px}
+ .pos{color:#a6e3a1}.neg{color:#f38ba8}.mut{color:#7f849c}
+ table{width:100%;border-collapse:collapse;margin-top:6px}
+ th,td{text-align:right;padding:6px 10px;border-bottom:1px solid #181b25}
+ th{color:#7f849c;font-size:11px;text-transform:uppercase}td:first-child,th:first-child{text-align:left}
+ .tag{font-size:11px;padding:1px 6px;border-radius:4px;background:#1e2230}
+</style></head><body>
+<h1>💸 Funding Carry <span class="mut">— OpenAlice cockpit</span></h1>
+<div class="sub">delta-neutral perp/spot carry · the market-neutral +EV family · honest-by-construction · <span id="age"></span></div>
+<div class="cards" id="cards"></div>
+<table><thead><tr><th>coin</th><th>ann funding %</th><th>side</th><th>accrued $</th><th>age (d)</th></tr></thead>
+<tbody id="rows"></tbody></table>
+<script>
+async function load(){
+ let d; try{ d=await (await fetch('funding.json?t='+Date.now())).json() }catch(e){ document.getElementById('cards').innerHTML='feed unavailable'; return }
+ if(d.error){ document.getElementById('cards').innerHTML='bot state error: '+d.error; return }
+ const cls=v=>v>0?'pos':v<0?'neg':'mut', sgn=v=>(v>0?'+':'')+v;
+ document.getElementById('age').textContent='updated '+new Date(d.ts*1000).toLocaleTimeString();
+ document.getElementById('cards').innerHTML=[
+  ['Equity','$'+d.equity.toLocaleString(),''],
+  ['P&L','$'+sgn(d.pnl),cls(d.pnl)],
+  ['Funding collected','$'+d.funding_collected,'pos'],
+  ['Open carries',d.n_open,''],
+  ['Closed',d.n_closed,'mut'],
+ ].map(c=>`<div class="card"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
+ document.getElementById('rows').innerHTML=(d.carries||[]).map(c=>
+  `<tr><td>${c.sym}</td><td class="${cls(c.ann_pct)}">${sgn(c.ann_pct)}%</td><td><span class="tag">${c.side}</span></td><td class="${cls(c.accrued)}">$${c.accrued}</td><td class="mut">${c.age_d}</td></tr>`).join('');
+}
+load(); setInterval(load, 15000);
+</script></body></html>
