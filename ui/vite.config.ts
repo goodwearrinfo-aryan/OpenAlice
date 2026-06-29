@@ -62,7 +62,28 @@ function readUiPort(): { port: number; strictPort: boolean } {
 const { port: uiPort, strictPort } = readUiPort()
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    // Make the merged static dashboard (public/dashboard.html) the default landing
+    // page: a bare GET / 302s to it. Only EXACTLY "/" is intercepted, so SPA deep
+    // links (/chat, /portfolio, …) still fall through to the app's index.html.
+    // Reversible: delete this plugin to restore the OpenAlice workbench at /.
+    {
+      name: 'dashboard-landing-redirect',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = (req.url || '').split('?')[0]
+          if (url === '/' || url === '/index.html') {
+            res.statusCode = 302
+            res.setHeader('Location', '/dashboard.html')
+            return res.end()
+          }
+          next()
+        })
+      },
+    },
+  ],
   // Inject the backend port as a compile-time constant so the dev client can
   // open the PTY WebSocket *directly* against the backend, bypassing the Vite
   // dev proxy. node-http-proxy's WS upgrade forwarding chokes under the
@@ -80,6 +101,16 @@ export default defineConfig({
   server: {
     port: uiPort,
     strictPort,
+    // Dual-stack bind (2026-06-29): with no `host`, Vite binds localhost which
+    // macOS maps to [::1] (IPv6) ONLY, so http://127.0.0.1:PORT fails and the
+    // cockpit is unreachable on the LAN. Binding '::' accepts IPv6 (::1), IPv4
+    // (127.0.0.1, via IPv4-mapped dual-stack) AND the LAN — so localhost,
+    // 127.0.0.1, and the phone all work. Reversible: delete this line.
+    host: '::',
+    // The bot daemons rewrite public/*.json feeds every few seconds. Without this,
+    // Vite full-reloads EVERY open page (incl. /chat) on each write — the cockpit
+    // panels poll their JSON themselves, so the dev server never needs to react to it.
+    watch: { ignored: ['**/public/*.json', '**/public/**/*.json'] },
     proxy: {
       '/api': {
         target: `http://localhost:${backendPort}`,
