@@ -4,3 +4,8 @@
 config.json
 credentials*
 *.pem
+
+# iCloud sync conflict copies — " 2" dupes slip past suffix rules (".env 2" lesson, 2026-07-03)
+* 2.*
+* 2/
+.env*
