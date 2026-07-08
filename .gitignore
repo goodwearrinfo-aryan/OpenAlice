@@ -9,3 +9,11 @@ credentials*
 * 2.*
 * 2/
 .env*
+
+# runtime noise — daemon-regenerated feeds, logs, deps, Finder litter
+node_modules/
+.DS_Store
+logs/
+*.log
+ui/public/*.json
+ui/public/tunnel_url.txt
