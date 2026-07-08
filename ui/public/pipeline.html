@@ -48,6 +48,12 @@
 <div class="strip" id="strip"></div>
 <div class="sect">Live Chart — BTC/ETH/SOL · candles · volume · order book</div>
 <iframe src="/chart.html" title="live chart" style="width:100%;height:380px;border:0;border-bottom:1px solid var(--line);display:block;background:#000"></iframe>
+<div class="panel" style="border-right:0">
+  <div class="sect" style="color:var(--red);border-left-color:var(--red)">KILL QUEUE <span id="nkill" style="color:var(--dim);font-size:11px"></span></div>
+  <div class="chips" id="killqueue" style="max-height:60px"></div>
+  <div class="sect" style="border-left-color:var(--amber)">NEAR GATE (n ≥ 20 → 30)</div>
+  <div class="chips" id="neargate" style="max-height:60px"></div>
+</div>
 <div class="grid">
   <div class="panel">
     <div class="sect">Bot Legs — Real Paper Record (<span id="nlegs">0</span>)</div>
@@ -55,8 +61,39 @@
   </div>
   <div>
     <div class="panel"><div class="sect">Candle Legs — Live Sim</div><table id="candle"><tbody></tbody></table></div>
-    <div class="panel"><div class="sect">Jobs (<span id="njobs">0</span>)</div><div class="scroll" style="max-height:200px"><table id="jobs"><tbody></tbody></table></div></div>
+    <div class="panel">
+      <div class="sect">Jobs (<span id="njobs">0</span>)</div>
+      <div style="padding:4px 12px 2px"><span style="color:var(--red);font-size:11px;letter-spacing:.5px">EXIT ≠ 0 &nbsp;</span><span id="failjobs"></span></div>
+      <div class="scroll" style="max-height:200px"><table id="jobs"><tbody></tbody></table></div>
+    </div>
     <div class="panel"><div class="sect">Agent Fleet (<span id="nag">0</span>)</div><div class="chips" id="agents"></div></div>
+  </div>
+</div>
+<!-- ── ALGO RACE ─────────────────────────────────────────────────────────────── -->
+<div class="panel" style="border-right:0;margin-top:1px">
+  <div class="sect" style="border-left-color:var(--cyan)">
+    ALGO RACE — 20 strategies · BTC 5m · $100k each · long/flat
+    <span id="algo-btc" style="color:var(--dim);font-size:11px;margin-left:12px"></span>
+    <span id="algo-prof" style="color:var(--grn);font-size:11px;margin-left:8px"></span>
+  </div>
+  <div style="overflow:auto">
+    <table id="algo-race" style="min-width:520px">
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th>ALGO</th>
+          <th class="r">P&L %</th>
+          <th class="r">P&L $</th>
+          <th class="r">EQUITY</th>
+          <th class="r" style="color:var(--dim)">POS</th>
+          <th class="r" style="color:var(--dim)">SIG</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div style="padding:4px 12px 6px;font-size:10px;color:var(--dim)">
+    HONEST: classic TA rules on BTC paper — most will NOT beat random w/ fees. Race is to measure, not claim edge.
   </div>
 </div>
 <div class="foot">
@@ -67,6 +104,25 @@
 const f=n=>{const x=Number(n);return isFinite(x)?x.toLocaleString(undefined,{maximumFractionDigits:0}):n};
 const f2=n=>{const x=Number(n);return isFinite(x)?(x>0?'+':'')+x.toFixed(2):n};
 const cls=n=>Number(n)>0?'pos':(Number(n)<0?'neg':'dim');
+async function tickAlgo(a20){
+  if(!a20) return;
+  const algos=a20.algos||[];
+  document.getElementById('algo-btc').textContent=`BTC $${(a20.btc_price||0).toLocaleString()}`;
+  document.getElementById('algo-prof').textContent=`${a20.profitable||0}/${a20.n_algos||0} profitable`;
+  document.querySelector('#algo-race tbody').innerHTML=algos.map((r,i)=>{
+    const pos=r.position>0?`<span class="pos">L ${r.position}</span>`:'<span class="dim">flat</span>';
+    const sig=r.signal?`<span class="pos">▲</span>`:`<span class="dim">—</span>`;
+    return `<tr>
+      <td class="dim" style="font-size:11px">${i+1}</td>
+      <td class="nm">${r.name||'?'}${r.error?` <span style="color:var(--red);font-size:10px">[err]</span>`:''}</td>
+      <td class="r ${cls(r.pnl_pct)}">${r.pnl_pct!=null?(r.pnl_pct>0?'+':'')+r.pnl_pct.toFixed(3)+'%':'—'}</td>
+      <td class="r ${cls(r.pnl)}">${r.pnl!=null?f2(r.pnl):'—'}</td>
+      <td class="r dim">${r.equity!=null?'$'+r.equity.toLocaleString():'—'}</td>
+      <td class="r">${pos}</td>
+      <td class="r">${sig}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan=7 class="dim" style="padding:8px 12px">waiting for oa_algo20.py feed…</td></tr>';
+}
 async function tick(){
   let d; try{ d=await (await fetch('/pipeline.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
   document.getElementById('ts').textContent=(d.ts||'').slice(11);
@@ -78,15 +134,34 @@ async function tick(){
   ].map(([l,v])=>`<div class="st"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
   document.getElementById('nlegs').textContent=(bl.legs||[]).length;
   document.getElementById('book').textContent='$'+f2(bl.total_pnl||0);
+
+  // Kill queue: criteria A (n≥10, wr<60, pnl<-0.5) OR B (n≥5, wr≤20, pnl<0)
+  const kills=[...new Set((bl.legs||[]).filter(l=>(l.n>=10&&l.winpct<60&&l.pnl<-0.50)||(l.n>=5&&l.winpct<=20&&l.pnl<0)).map(l=>l.leg))];
+  document.getElementById('nkill').textContent=kills.length?`(${kills.length})`:'';
+  document.getElementById('killqueue').innerHTML=kills.length
+    ?kills.map(n=>`<span class="chip" style="color:var(--red);border-color:#3a0a0a">${n}</span>`).join('')
+    :'<span class="dim" style="padding:4px 12px;font-size:11px">none — book clean</span>';
+
+  // Near gate: n≥20 and <30
+  const ng=(bl.legs||[]).filter(l=>l.n>=20&&l.n<30).sort((a,b)=>b.n-a.n);
+  document.getElementById('neargate').innerHTML=ng.length
+    ?ng.map(l=>`<span class="chip" style="color:var(--amber)">${l.leg} <span style="color:var(--dim)">${l.n}/30</span></span>`).join('')
+    :'<span class="dim" style="padding:4px 12px;font-size:11px">no legs near gate</span>';
+
   document.querySelector('#legs tbody').innerHTML=(bl.legs||[]).map(l=>
-    `<tr><td class="nm">${l.leg}</td><td class="r dim">${l.n}</td><td class="r">${l.winpct}</td><td class="r ${cls(l.pnl)}">${f2(l.pnl)}</td></tr>`).join('')||'<tr><td colspan=4 class=dim>no data</td></tr>';
+    `<tr><td class="nm">${l.leg}${l.structural?` <span style="color:var(--cyan);font-size:10px">[S]</span>`:''}</td><td class="r dim">${l.n}</td><td class="r">${l.winpct}</td><td class="r ${cls(l.pnl)}">${f2(l.pnl)}</td></tr>`).join('')||'<tr><td colspan=4 class=dim>no data</td></tr>';
   document.querySelector('#candle tbody').innerHTML=cd.map(l=>{const n=l.wins+l.losses;
     return `<tr><td class="nm">${l.leg}</td><td><span class="${l.pos==='LONG'?'pos':'dim'}">${l.pos.toUpperCase()}</span></td><td class="r">${l.winpct}% <span class="dim">(${l.wins}/${n})</span></td><td class="r dim">BT ${l.backtest}%</td></tr>`;}).join('');
   document.getElementById('njobs').textContent=`${jb.running||0}/${jb.total||0}`;
+  const failing=(jb.jobs||[]).filter(j=>!j.running&&j.exit!=='0'&&j.exit!=='-'&&j.exit!=='');
+  document.getElementById('failjobs').innerHTML=failing.length
+    ?failing.map(j=>`<span class="chip" style="color:var(--red);border-color:#3a0a0a">${j.label.replace('com.aryan.','')}</span>`).join('')
+    :'<span style="color:var(--grn);font-size:11px">all clean ✓</span>';
   document.querySelector('#jobs tbody').innerHTML=(jb.jobs||[]).map(j=>
     `<tr><td><span class="${j.running?'on':'off'}">${j.running?'●':'○'}</span> ${j.label.replace('com.aryan.','')}</td><td class="r dim">${j.running?('PID '+j.pid):('EXIT '+j.exit)}</td></tr>`).join('');
   document.getElementById('nag').textContent=ag.count||0;
   document.getElementById('agents').innerHTML=(ag.names||[]).map(n=>`<span class="chip">${n}</span>`).join('');
+  tickAlgo(d.algo20);
 }
 tick(); setInterval(tick,3000);
 </script>

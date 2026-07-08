@@ -35,17 +35,17 @@
 <body>
 <div class="top">
   <span class="brand">OPENALICE</span>
-  <span class="cmd">CANDLE LEGS &lt;<b>GO</b>&gt; &nbsp; LIVE WIN-RATE · LONG/FLAT</span>
+  <span class="cmd">CANDLE LEGS &lt;<b>GO</b>&gt; &nbsp; 5:1 REWARD:RISK BRACKET · TARGET-HIT vs BREAKEVEN</span>
   <span class="live"><span class="blink"></span><span id="ts">--:--:--</span></span>
 </div>
 <div class="strip" id="strip"></div>
-<div class="sect">Candle Legs — Own Sim Account Each</div>
+<div class="sect">Candle Legs — 5:1 Bracket (1×ATR stop / 5×ATR target)</div>
 <table>
-  <thead><tr><th>LEG</th><th>POS</th><th class="r">LIVE WIN%</th><th class="r">CLOSED</th><th class="r">BACKTEST</th><th class="r">NLV</th><th class="r">uPnL</th></tr></thead>
+  <thead><tr><th>LEG</th><th>POS</th><th>BRACKET · sl→entry→tp</th><th class="r">TGT-HIT%</th><th class="r">CLOSED</th><th class="r">BACKTEST</th><th class="r">uPnL</th></tr></thead>
   <tbody id="legs"><tr><td colspan="7" class="dim">connecting feed…</td></tr></tbody>
 </table>
 <div class="foot">
-  <span>HONEST: BACKTEST 46–57% (COIN-FLIP), NOT 79% · LONG/FLAT ONLY (MOCK CAN'T SHORT)</span>
+  <span>HONEST: EVERY ENTRY IS A 5:1 BRACKET (1×ATR STOP / 5×ATR TARGET). TO PROFIT, TARGET-HIT% MUST BEAT BREAKEVEN 16.7% — A 5:1 RATIO IS NOT EDGE; DIRECTIONAL CANDLE SIGNALS LIKELY WON'T CLEAR IT. LONG-ONLY (MOCK CAN'T SHORT).</span>
   <span><a href="/tournament.html">TOURNAMENT</a> · <a href="/pipeline.html">PIPELINE</a></span>
 </div>
 <script>
@@ -55,16 +55,22 @@ async function tick(){
   let d; try{ d=await (await fetch('/legs.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
   document.getElementById('ts').textContent=(d.ts||'').slice?(''+d.ts).slice(0,8):d.ts;
   document.getElementById('strip').innerHTML=`<div class="st"><div class="l">BTC</div><div class="v">$${f(d.btc)}</div></div>
+    <div class="st"><div class="l">ATR(14)</div><div class="v">$${f(d.atr)}</div></div>
+    <div class="st"><div class="l">REWARD:RISK</div><div class="v">${d.rr||5}:1</div></div>
+    <div class="st"><div class="l">BREAKEVEN</div><div class="v">${d.breakeven||16.7}%</div></div>
     <div class="st"><div class="l">LEGS</div><div class="v">${(d.legs||[]).length}</div></div>`;
+  const be=Number(d.breakeven)||16.7;
   document.getElementById('legs').innerHTML=(d.legs||[]).map(l=>{const n=l.wins+l.losses, up=Number(l.upnl)||0;
+    const rate=n?l.winpct:null, rcls=n===0?'dim':(rate>=be?'pos':'neg');
+    const bracket=(l.pos==='LONG'&&l.entry)?`<span class="neg">${f(l.stop)}</span> → <span class="nm">${f(l.entry)}</span> → <span class="pos">${f(l.target)}</span>`:'<span class="fl">— flat (waiting for signal)</span>';
     return `<tr>
       <td class="nm">${l.leg}</td>
       <td><span class="${l.pos==='LONG'?'pl':'fl'}">${l.pos.toUpperCase()}</span></td>
-      <td class="r">${l.winpct}%<div class="bar"><i style="width:${Math.max(0,Math.min(100,l.winpct))}%"></i></div></td>
+      <td style="font-size:11px">${bracket}</td>
+      <td class="r ${rcls}">${n?rate+'%':'—'}<div class="bar" title="need >${be}% target-hit to profit"><i style="width:${Math.max(0,Math.min(100,rate||0))}%;background:${rate>=be?'var(--grn)':'var(--orange)'}"></i></div></td>
       <td class="r dim">${l.wins}/${n}</td>
       <td class="r dim">${l.backtest}%</td>
-      <td class="r">$${f(l.nlv)}</td>
-      <td class="r ${up>0?'pos':up<0?'neg':'dim'}">${(up>0?'+':'')}$${f2(up)}</td>
+      <td class="r ${up>0?'pos':up<0?'neg':'dim'}">$${f2(up)}</td>
     </tr>`;}).join('')||'<tr><td colspan=7 class=dim>no data</td></tr>';
 }
 tick(); setInterval(tick,3000);

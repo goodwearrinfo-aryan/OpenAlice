@@ -65,7 +65,7 @@
 <script>
 const C=document.getElementById('c'), X=C.getContext('2d');
 let DATA=[], INTERVAL='1h', SYMBOL='BTC', HOVER=-1, TRADES=[];
-const PERIODS=['15m','1h','4h','1d'], SYMBOLS=['BTC','ETH','SOL'], BARMS={'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
+const PERIODS=['15m','1h','4h','1d'], SYMBOLS=['BTC','ETH','SOL','BNB','XRP','DOGE','ADA','AVAX','LINK'], BARMS={'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
 const TAPE=['BTC','ETH','SOL','BNB','XRP','DOGE','ADA','AVAX'], tdata={};
 const SY=document.getElementById('symbols');
 SY.innerHTML=SYMBOLS.map(s=>`<button class="${s===SYMBOL?'on':''}" data-s="${s}">${s}</button>`).join('');

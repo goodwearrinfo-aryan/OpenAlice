@@ -101,6 +101,12 @@ export default defineConfig({
   server: {
     port: uiPort,
     strictPort,
+    // Allow the cloudflared quick-tunnel to front this dev server over HTTPS.
+    // Quick-tunnel URLs rotate every restart, so a leading-dot wildcard admits
+    // any *.trycloudflare.com host without hardcoding the current one. Vite
+    // otherwise rejects unknown Host headers ("This host is not allowed").
+    // Reversible: delete this line to restore localhost/LAN-only access.
+    allowedHosts: ['.trycloudflare.com'],
     // Dual-stack bind (2026-06-29): with no `host`, Vite binds localhost which
     // macOS maps to [::1] (IPv6) ONLY, so http://127.0.0.1:PORT fails and the
     // cockpit is unreachable on the LAN. Binding '::' accepts IPv6 (::1), IPv4
