@@ -1,0 +1,530 @@
+<!doctype html><html><head><meta charset="utf-8"><title>OpenAlice — Unified Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ :root{--bg:#0b0e14;--card:#11141c;--bd:#1e2230;--mut:#7f849c;--fg:#cdd6f4;--g:#a6e3a1;--r:#f38ba8;--y:#f9e2af;--b:#89b4fa}
+ *{box-sizing:border-box}
+ html,body{height:100%}
+ body{background:var(--bg);color:var(--fg);font:14px/1.5 ui-monospace,Menlo,monospace;margin:0;display:flex;flex-direction:column}
+ header{padding:14px 20px 0;flex:0 0 auto}
+ h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:12px;margin:2px 0 12px}
+ .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+ .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 16px;min-width:140px;flex:1}
+ .card .k{color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.5px}.card .v{font-size:22px;margin-top:2px}
+ .pos{color:var(--g)}.neg{color:var(--r)}.mut{color:var(--mut)}
+ .tabs{display:flex;gap:4px;flex-wrap:wrap;padding:0 20px;flex:0 0 auto;border-bottom:1px solid var(--bd)}
+ .tab{color:var(--mut);background:none;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;padding:7px 13px;font:inherit;font-size:12px;cursor:pointer}
+ .tab:hover{color:var(--fg)}
+ .tab.on{color:var(--b);background:var(--card);border-color:var(--bd)}
+ .content{flex:1 1 auto;position:relative;overflow:hidden}
+ .pane{position:absolute;inset:0;overflow:auto;display:none}
+ .pane.on{display:block}
+ iframe{width:100%;height:100%;border:0;background:var(--bg)}
+ /* overview table */
+ #overview{padding:18px 20px}
+ table{width:100%;border-collapse:collapse}
+ th,td{text-align:right;padding:8px 12px;border-bottom:1px solid #181b25}
+ th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+ td:first-child,th:first-child,td:nth-child(2),th:nth-child(2){text-align:left}
+ tr.mn{background:#0e1f17}
+ .tag{font-size:10px;padding:1px 7px;border-radius:5px;background:var(--bd);color:var(--mut)}
+ .tag.mn{background:#1e3a2a;color:var(--g)}.tag.dir{background:#3a2a1e;color:var(--y)}.tag.str{background:#252a3a;color:#9aa6e0}
+ tr.str{background:#13151d}  /* structural edge-bot $1k books */
+ .foot{color:var(--mut);font-size:11px;margin-top:16px;border-top:1px solid var(--bd);padding-top:10px}
+ /* funding-carry summary block on Overview (funding.json) */
+ #fcarry{margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid var(--bd)}
+ #fcarry .fchdr{font-size:14px;margin:0 0 10px}
+ #fcarry .fctbl{margin-top:8px}
+ /* Mind — per-bot advice engine (deterministic rules over live feeds) */
+ #mind{margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid var(--bd)}
+ #mind .fchdr{font-size:14px;margin:0 0 10px}
+ .adv{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid #181b25;font-size:12px}
+ .adv .sev{flex:0 0 52px;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+ .adv .sev.crit{color:var(--r)} .adv .sev.warn{color:var(--y)} .adv .sev.info{color:var(--b)} .adv .sev.good{color:var(--g)}
+ .adv .who{flex:0 0 160px;color:var(--fg)}
+ .adv .what{color:var(--mut)}
+ /* "at a glance" KPI strip on Overview (fleet + tournament + funding, derived) */
+ .glance{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+ .gchip{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:5px 10px;min-width:94px}
+ .gchip .gl{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+ .gchip .gv{font-size:13px;margin-top:1px}
+ /* live market ticker (keyless Binance spot + funding, browser-side) */
+ .mktbar{display:flex;align-items:center;gap:14px;margin:0 0 12px;padding:8px 14px;background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow-x:auto}
+ .mktlbl{color:var(--mut);font-size:10px;letter-spacing:.5px;flex:0 0 auto;text-transform:uppercase}
+ .ticker{display:flex;gap:20px;flex:1;min-width:0}
+ .tk{display:flex;flex-direction:column;line-height:1.2;flex:0 0 auto}
+ .tk .s{font-size:10px;color:var(--mut)}
+ .tk .p{font-size:15px;margin:1px 0}
+ .tk .c{font-size:11px}
+ /* derivs/macro strip (marketx.json) */
+ .mx{display:flex;flex-direction:column;line-height:1.2;flex:0 0 auto}
+ .mx .s{font-size:10px;color:var(--mut)}
+ .mx .p{font-size:14px;margin:1px 0}
+ .mx .c{font-size:11px}
+ /* fleet session equity curve + top movers */
+ .curvewrap{display:flex;align-items:center;gap:8px}
+ .movers{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 12px;font-size:12px}
+ .movers .m{color:var(--mut)}
+ /* sortable headers */
+ th.srt{cursor:pointer;user-select:none}th.srt:hover{color:var(--fg)}
+ th.srt.on{color:var(--b)}
+ /* freshness badge on tabs */
+ .fb{font-size:9px;padding:0 4px;border-radius:6px;margin-left:5px;vertical-align:middle}
+ .fb.ok{background:#173a26;color:var(--g)}.fb.old{background:#3a3418;color:var(--y)}.fb.dead{background:#3a1620;color:var(--r)}
+ /* stale guard: grey out a card/strip whose feed went stale */
+ .stale{opacity:.45;filter:grayscale(.6)}
+ /* event log */
+ #eventlog{padding:14px 20px;font-size:12px}
+ #eventlog .ev{padding:4px 0;border-bottom:1px solid #181b25;color:var(--mut)}
+ #eventlog .ev b{color:var(--fg);font-weight:normal}
+ /* markets board tab */
+ #market{padding:16px 20px}
+ .mkgrid{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+ .mkcard{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;min-width:250px;flex:1}
+ .mkcard h3{margin:0 0 8px;font-size:14px}
+ .mkrow{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:12px;border-bottom:1px solid #181b25}
+ .mkrow .kk{color:var(--mut)}
+ .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+ .chip{background:var(--bd);color:var(--fg);border-radius:6px;padding:1px 8px;font-size:11px}
+ .newslist{font-size:12px}.newslist div{padding:5px 0;border-bottom:1px solid #181b25}
+</style></head><body>
+<header>
+ <h1>🛰️ OpenAlice — Unified Dashboard</h1>
+ <div class="sub">whole paper fleet + every panel, one page · <span id="age">loading…</span> · <span id="wd"></span> · <span id="hon"></span> · <span class="curvewrap">session P&L <span id="curve"></span></span></div>
+ <div class="cards" id="cards"></div>
+ <div class="movers" id="movers"></div>
+ <div class="mktbar"><span class="mktlbl">Live Market</span><div class="ticker" id="ticker"><span class="mut">loading market…</span></div></div>
+ <div class="mktbar"><span class="mktlbl">Derivs · Macro</span><div class="ticker" id="mxrow"><span class="mut">loading…</span></div></div>
+ <div id="resetbanner"></div>
+ <div id="alertbanner"></div>
+</header>
+<div class="tabs" id="tabs"></div>
+<div class="content" id="content">
+ <div class="pane on" id="overview">
+  <div id="glance" class="glance"><span class="mut">gathering signals…</span></div>
+  <div id="glance2" class="glance"><span class="mut">crunching quant metrics…</span></div>
+  <div id="fcarry"><span class="mut">loading funding carry…</span></div>
+  <div id="mind"><span class="mut">thinking about the bots…</span></div>
+  <table><thead><tr>
+   <th class="srt" data-k="label">account</th><th class="srt" data-k="type">type</th>
+   <th class="srt" data-k="equity">equity</th><th class="srt on" data-k="pnl">P&L</th>
+   <th class="srt" data-k="pnl_pct">%</th><th>trend</th><th class="srt" data-k="positions">pos</th>
+   <th class="srt" data-k="leverage">lev</th><th class="srt" data-k="unrealized">uPnL</th><th>verdict</th>
+  </tr></thead>
+  <tbody id="rows"></tbody></table>
+  <div class="foot" id="foot"></div>
+ </div>
+ <div class="pane" id="market"><div id="marketboard"><span class="mut">loading markets…</span></div></div>
+ <div class="pane" id="events"><div id="eventlog"><span class="mut">watching for watchdog heals, honesty flags, sim resets…</span></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),
+ cls=v=>v>0?'pos':v<0?'neg':'mut',
+ sgn=v=>v==null?'n/a':(v>0?'+':'')+(+v).toLocaleString(undefined,{maximumFractionDigits:0});
+// inline SVG sparkline of an account's recent equity; green if up over the window, red if down
+function spark(arr){
+ if(!arr||arr.length<2) return '<span class="mut">·</span>';
+ const w=66,h=18,min=Math.min(...arr),max=Math.max(...arr),rng=max-min;
+ const pts=arr.map((v,i)=>`${(i/(arr.length-1)*w).toFixed(1)},${(rng?h-((v-min)/rng)*h:h/2).toFixed(1)}`).join(' ');
+ const col=arr[arr.length-1]>=arr[0]?'var(--g)':'var(--r)';
+ return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="vertical-align:middle"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+}
+
+// Every dashboard merged here. Overview is inline (fleet.json); the rest reuse
+// each panel's existing standalone code, lazy-loaded in an iframe on first open.
+const TABS=[
+ {id:'overview', label:'🛰️ Overview'},
+ {id:'funding',  label:'💸 Funding',    src:'funding.html'},
+ {id:'pairs',    label:'⚖️ Pairs',      src:'pairs.html'},
+ {id:'macd5m',   label:'📈 MACD-5m',    src:'macd5m.html'},
+ {id:'legs',     label:'🦵 Legs',       src:'legs.html'},
+ {id:'tournament',label:'🏆 Tournament',src:'tournament.html'},
+ {id:'pipeline', label:'🧩 Pipeline',   src:'pipeline.html'},
+ {id:'chart',    label:'📊 Chart',      src:'chart.html'},
+ {id:'trades',   label:'🧾 Trades',     src:'trades.html'},
+ {id:'chat',     label:'💬 Alice chat', src:'/chat'},
+ {id:'portfolio',label:'📁 Portfolio',  src:'/portfolio'},
+ {id:'market',   label:'🪙 Markets'},
+ {id:'events',   label:'🔔 Events'},
+];
+function showTab(id){
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
+ document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+ let pane=$('pane-'+id)||$(id);
+ const t=TABS.find(t=>t.id===id);
+ if(!pane && t && t.src){                     // lazy: build the iframe pane once
+  pane=document.createElement('div'); pane.className='pane'; pane.id='pane-'+id;
+  const f=document.createElement('iframe'); f.src=t.src; f.loading='lazy';
+  pane.appendChild(f); $('content').appendChild(pane);
+ }
+ (pane||$('overview')).classList.add('on');
+ location.hash=id;
+}
+$('tabs').innerHTML=TABS.map(t=>`<button class="tab${t.id==='overview'?' on':''}" data-id="${t.id}">${t.label}</button>`).join('');
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab'); if(b)showTab(b.dataset.id)});
+
+// ---- sortable overview rows (default P&L desc) ----
+let FLEET=[], SORT={k:'pnl',dir:-1};
+function rowHtml(a){
+ if(a.equity==null) return `<tr><td>${a.label}</td><td colspan=9 class=mut>not responding</td></tr>`;
+ const mn=a.type==='market-neutral', str=a.type==='structural';
+ const tcls=mn?'mn':str?'str':(a.type&&a.type.includes('directional')?'dir':'');
+ const rcls=mn?'mn':str?'str':'';
+ const tab=(TABS.find(t=>t.src===a.link)||{}).id;
+ const nm=tab?`<a href="#${tab}" style="color:var(--b);text-decoration:none">${a.label}</a>`:a.label;
+ return `<tr class="${rcls}"><td>${nm}</td><td><span class="tag ${tcls}">${a.type||''}</span></td>
+  <td>$${(+a.equity).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+  <td class="${cls(a.pnl)}">$${sgn(a.pnl)}</td><td class="${cls(a.pnl_pct)}">${a.pnl_pct==null?'n/a':(a.pnl_pct>0?'+':'')+a.pnl_pct+'%'}</td>
+  <td>${spark(a.spark)}</td>
+  <td class="mut">${a.positions}</td><td class="${(a.leverage||0)>3?'neg':'mut'}">${a.leverage==null?'—':a.leverage+'x'}</td><td class="${cls(a.unrealized)}">$${sgn(a.unrealized)}</td>
+  <td class="mut" style="text-align:left">${a.verdict||''}</td></tr>`;
+}
+function renderRows(){
+ const k=SORT.k, dir=SORT.dir;
+ const sorted=[...FLEET].sort((a,b)=>{
+  let x=a[k], y=b[k];
+  if(k==='label'||k==='type'){ return dir*((x||'').toString().localeCompare((y||'').toString())); }
+  x=x==null?-Infinity:+x; y=y==null?-Infinity:+y; return dir*(x-y);
+ });
+ $('rows').innerHTML=sorted.map(rowHtml).join('');
+}
+document.addEventListener('click',e=>{const th=e.target.closest('th.srt'); if(!th)return;
+ const k=th.dataset.k; SORT.dir=(SORT.k===k? -SORT.dir : (k==='label'||k==='type'?1:-1)); SORT.k=k;
+ document.querySelectorAll('th.srt').forEach(x=>x.classList.toggle('on',x.dataset.k===k));
+ renderRows();
+});
+// ---- top movers ----
+function renderMovers(){
+ const s=FLEET.filter(a=>a.pnl_pct!=null); if(!s.length){ $('movers').innerHTML=''; return; }
+ const up=[...s].sort((a,b)=>b.pnl_pct-a.pnl_pct).slice(0,3);
+ const dn=[...s].sort((a,b)=>a.pnl_pct-b.pnl_pct).slice(0,3);
+ const f=a=>`${a.label} <span class="${cls(a.pnl_pct)}">${a.pnl_pct>0?'+':''}${a.pnl_pct}%</span>`;
+ $('movers').innerHTML='<span class="m">▲ top:</span> '+up.map(f).join(' · ')+' &nbsp;&nbsp; <span class="m">▼ bottom:</span> '+dn.map(f).join(' · ');
+}
+// ---- session equity curve (ring buffer of total P&L, this browser session only) ----
+function renderCurve(pnl){
+ if(pnl==null)return; let buf=[]; try{ buf=JSON.parse(sessionStorage.getItem('pnlcurve')||'[]'); }catch(e){}
+ const last=buf[buf.length-1];
+ if(last==null || Math.abs(last-pnl)>1e-9) buf.push(+pnl);
+ if(buf.length>120) buf=buf.slice(-120);
+ sessionStorage.setItem('pnlcurve',JSON.stringify(buf));
+ $('curve').innerHTML=spark(buf.length<2?[+pnl,+pnl]:buf);
+}
+// ---- events pane: current guard status + active issues, refreshed each cycle ----
+function renderEvents(wd,hon,d){
+ const evs=[];
+ (wd.unhealed||[]).forEach(x=>evs.push(['🛑 watchdog UNHEALED',x,'neg']));
+ (wd.healed||[]).forEach(x=>evs.push(['🛡 watchdog healed',x,'pos']));
+ (hon.flags||[]).forEach(x=>evs.push(['⚠ honesty flag',x,'neg']));
+ if(d.reset_at && (Date.now()/1000-d.reset_at)<3600) evs.push(['♻ sim reset',new Date(d.reset_at*1000).toLocaleTimeString(),'mut']);
+ if((wd.jobs||[]).length) evs.push(['🛰 monitored jobs',(wd.jobs||[]).length+' healthy (self-heal + alert)','mut']);
+ if((hon.ok)) evs.push(['✅ honesty','no fabricated-number flags','pos']);
+ $('eventlog').innerHTML=evs.length ? evs.map(e=>`<div class="ev"><b class="${e[2]}">${e[0]}</b> — ${e[1]}</div>`).join('') : '<span class="mut">no active alerts — guards quiet</span>';
+}
+// ---- full Markets board tab (funding x-venue, OI, L/S, basis, IV/skew, macro, trending, news) ----
+function renderBoard(d){
+ const el=$('marketboard'); if(!el)return;
+ const coinCard=(c)=>{ const x=d.crypto&&d.crypto[c]; if(!x)return '';
+  const fu=x.funding||{};
+  const frow=['binance','bybit','okx'].map(v=>fu[v]==null?'':`<div class="mkrow"><span class="kk">funding · ${v}</span><span class="${cls(fu[v])}">${fu[v]>0?'+':''}${fu[v]}%/yr</span></div>`).join('');
+  return `<div class="mkcard"><h3>${c} <span class="mut" style="font-size:11px">$${x.index?(+x.index).toLocaleString():'—'}</span></h3>
+   ${frow}
+   <div class="mkrow"><span class="kk">richest funding</span><span class="pos">${x.funding_rich?x.funding_rich[0]+' '+x.funding_rich[1]+'%/yr':'—'}</span></div>
+   <div class="mkrow"><span class="kk">open interest</span><span>${x.oi_usd?'$'+(x.oi_usd/1e9).toFixed(2)+'B':'—'}</span></div>
+   <div class="mkrow"><span class="kk">long/short ratio</span><span class="${x.long_short>1?'pos':x.long_short<1?'neg':''}">${x.long_short==null?'—':x.long_short}</span></div>
+   <div class="mkrow"><span class="kk">basis (${x.basis_expiry||'—'})</span><span class="${cls(x.basis_annual_pct)}">${x.basis_annual_pct==null?'—':(x.basis_annual_pct>0?'+':'')+x.basis_annual_pct+'%/yr'}</span></div>
+   <div class="mkrow"><span class="kk">ATM IV / 90-110 skew</span><span>${x.atm_iv==null?'—':x.atm_iv+'%'} / ${x.skew_90_110==null?'—':x.skew_90_110}</span></div>
+  </div>`;
+ };
+ const g=d.global||{}, fg=d.fear_greed;
+ const macro=`<div class="mkcard"><h3>Macro · On-chain</h3>
+   <div class="mkrow"><span class="kk">Fear &amp; Greed</span><span class="${fg?(fg.value<40?'neg':fg.value>60?'pos':''):''}">${fg?fg.value+' · '+fg.label:'—'}</span></div>
+   <div class="mkrow"><span class="kk">BTC dominance</span><span>${g.btc_dominance!=null?g.btc_dominance+'%':'—'}</span></div>
+   <div class="mkrow"><span class="kk">total mcap</span><span>${g.total_mcap_usd?'$'+(g.total_mcap_usd/1e12).toFixed(2)+'T ':'—'}<span class="${cls(g.mcap_change_24h)}">${g.mcap_change_24h!=null?(g.mcap_change_24h>0?'+':'')+g.mcap_change_24h+'%':''}</span></span></div>
+   <div class="mkrow"><span class="kk">BTC gas</span><span>${d.btc_gas?d.btc_gas.fastest+' sat/vB':'—'}</span></div>
+   <div class="mkrow"><span class="kk">ETH gas</span><span>${d.eth_gas_gwei!=null?d.eth_gas_gwei+' gwei':'—'}</span></div>
+   <div class="mkrow"><span class="kk">trending</span><span class="chips">${(d.trending||[]).map(t=>`<span class="chip">${t}</span>`).join('')||'—'}</span></div>
+  </div>`;
+ const news=`<div class="mkcard" style="flex-basis:100%"><h3>🗞 Crypto headlines <span class="mut" style="font-size:11px">· Cointelegraph</span></h3><div class="newslist">${(d.news||[]).map(n=>`<div>• ${(''+n).replace(/</g,'&lt;')}</div>`).join('')||'<span class="mut">no headlines</span>'}</div></div>`;
+ el.innerHTML=`<div class="mkgrid">${coinCard('BTC')}${coinCard('ETH')}${macro}</div>${news}`;
+}
+// ---- Funding-carry summary on Overview (funding.json) — the delta-neutral perp/spot carry
+// book, surfaced here so you see it without switching to the Funding tab. ----
+async function loadFunding(){
+ if(document.hidden)return;
+ const el=$('fcarry'); if(!el)return;
+ let d; try{ d=await (await fetch('funding.json?t='+Date.now())).json(); }
+ catch(e){ el.innerHTML='<span class="mut">funding-carry feed unavailable</span>'; return; }
+ if(d.error){ el.innerHTML='<span class="mut">funding-carry: '+d.error+'</span>'; return; }
+ FUNDING=d;  // cache for the at-a-glance strip
+ const stale=(Date.now()/1000-(d.ts||0))>1800;  // >30m ⇒ bridge likely down
+ const cards=[
+  ['Carry equity','$'+(+d.equity).toLocaleString(undefined,{maximumFractionDigits:0}),''],
+  ['Carry P&L','$'+sgn(d.pnl),cls(d.pnl)],
+  ['Funding collected','$'+(+d.funding_collected).toLocaleString(undefined,{maximumFractionDigits:2}),'pos'],
+  ['Open carries',d.n_open,'mut'],
+  ['Closed',d.n_closed,'mut'],
+ ].map(c=>`<div class="card"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
+ // show the biggest live carries by accrued $ (top 6)
+ const top=(d.carries||[]).slice().sort((a,b)=>Math.abs(b.accrued)-Math.abs(a.accrued)).slice(0,6);
+ const rows=top.map(c=>`<tr><td>${c.sym}</td><td><span class="tag">${c.side}</span></td>`
+  +`<td class="${cls(c.ann_pct)}">${(c.ann_pct>0?'+':'')+c.ann_pct}%</td>`
+  +`<td class="${cls(c.accrued)}">$${c.accrued}</td><td class="mut">${c.age_d}d</td></tr>`).join('');
+ el.innerHTML=`<div class="fchdr">💸 Funding Carry <span class="mut" style="font-size:11px">`
+  +`· delta-neutral perp/spot · updated ${new Date(d.ts*1000).toLocaleTimeString()}</span></div>`
+  +`<div class="cards">${cards}</div>`
+  +`<table class="fctbl"><thead><tr><th>coin</th><th>side</th><th>ann funding</th><th>accrued</th><th>age</th></tr></thead>`
+  +`<tbody>${rows||'<tr><td colspan="5" class="mut">no open carries</td></tr>'}</tbody></table>`;
+ el.classList.toggle('stale',stale);
+}
+// ---- "At a glance" KPI strip on Overview: ~15 important signals derived from feeds
+// already loaded (fleet.json via FLEET, funding.json via FUNDING) + one tournament.json
+// fetch. Every chip is null-guarded so a missing feed just drops that chip. ----
+let FUNDING={}, MARKETX={}, WD={}, HON={}, TOURN={};
+async function loadGlance(){
+ if(document.hidden)return;
+ const el=$('glance'); if(!el)return;
+ let t={}; try{ t=await (await fetch('tournament.json?t='+Date.now())).json(); }catch(e){}
+ TOURN=t;  // cache for the quant strip
+ const f=FUNDING||{}, fleet=FLEET||[], chips=[];
+ const push=(lab,val,c)=>{ if(val!=null&&val!=='') chips.push(`<span class="gchip"><span class="gl">${lab}</span><span class="gv ${c||''}">${val}</span></span>`); };
+ const money=v=>'$'+sgn(v);
+ // --- tournament ---
+ const board=t.board||[];
+ if(t.leader) push('🏆 leader', t.leader+(board[0]&&board[0].winpct!=null?' · '+board[0].winpct+'%w':''), board[0]&&board[0].smart?'pos':'');
+ if(board[1]) push('🥈 runner-up', board[1].name+' '+(board[1].ret_pct>0?'+':'')+board[1].ret_pct+'%', cls(board[1].ret_pct));
+ if(t.cycles!=null) push('🔁 cycles', (+t.cycles).toLocaleString(),'mut');
+ if(t.pairs_z!=null) push('⚖️ pairs Z', (t.pairs_z>0?'+':'')+t.pairs_z, Math.abs(t.pairs_z)>2?'pos':'mut');
+ if(t.basis!=null) push('📐 spot-perp basis', (t.basis*100).toFixed(3)+'%', cls(t.basis));
+ // --- fleet-derived ---
+ if(fleet.length){
+  const wp=fleet.filter(a=>a.pnl!=null);
+  push('🟢 win / lose', wp.filter(a=>a.pnl>0).length+' / '+wp.filter(a=>a.pnl<0).length, wp.filter(a=>a.pnl>0).length>=wp.filter(a=>a.pnl<0).length?'pos':'neg');
+  const upnl=fleet.reduce((s,a)=>s+(+a.unrealized||0),0); push('📉 fleet uPnL', money(upnl), cls(upnl));
+  push('📌 open pos', fleet.reduce((s,a)=>s+(+a.positions||0),0),'mut');
+  const levd=fleet.filter(a=>a.leverage!=null);
+  if(levd.length){ const avg=levd.reduce((s,a)=>s+(+a.leverage),0)/levd.length; push('🎚 avg lev', avg.toFixed(1)+'x', avg>3?'neg':'mut');
+   const mx=[...levd].sort((a,b)=>b.leverage-a.leverage)[0]; push('⚠️ max lev', mx.label+' '+mx.leverage+'x', mx.leverage>3?'neg':'mut'); }
+  const mn=fleet.filter(a=>a.type==='market-neutral').length, dir=fleet.filter(a=>(a.type||'').includes('directional')).length, str=fleet.filter(a=>a.type==='structural').length;
+  push('🧮 MN/Dir/Str', mn+' / '+dir+' / '+str,'mut');
+ }
+ // --- funding carry extremes ---
+ if(f.pnl!=null) push('💸 carry P&L', money(f.pnl), cls(f.pnl));
+ const cr=f.carries||[];
+ if(cr.length){ const best=[...cr].sort((a,b)=>b.ann_pct-a.ann_pct)[0], worst=[...cr].sort((a,b)=>a.ann_pct-b.ann_pct)[0];
+  push('🥇 best carry', best.sym+' '+(best.ann_pct>0?'+':'')+best.ann_pct+'%', cls(best.ann_pct));
+  push('🥶 worst carry', worst.sym+' '+(worst.ann_pct>0?'+':'')+worst.ann_pct+'%', cls(worst.ann_pct)); }
+ // --- macro / vol / ops (marketx.json + watchdog.json + honesty.json) ---
+ const mx=MARKETX||{}, bx=(mx.crypto||{}).BTC||{}, ex=(mx.crypto||{}).ETH||{}, fg=mx.fear_greed, gl=mx.global||{};
+ if(fg) push('😱 fear & greed', fg.value+' · '+fg.label, fg.value<40?'neg':fg.value>60?'pos':'mut');
+ if(bx.atm_iv!=null) push('📊 BTC IV', bx.atm_iv+'%'+(bx.skew_90_110!=null?' · skew '+bx.skew_90_110:''),'mut');
+ if(ex.atm_iv!=null) push('📊 ETH IV', ex.atm_iv+'%'+(ex.skew_90_110!=null?' · skew '+ex.skew_90_110:''),'mut');
+ if(gl.btc_dominance!=null) push('🟠 BTC dom', gl.btc_dominance+'%'+(gl.mcap_change_24h!=null?' · mcap '+(gl.mcap_change_24h>0?'+':'')+gl.mcap_change_24h+'%':''), cls(gl.mcap_change_24h));
+ const wd=WD||{}, hon=HON||{};
+ if(Object.keys(wd).length) push('🛡 watchdog', (wd.unhealed||[]).length?((wd.unhealed).length+' UNHEALED'):((wd.jobs||[]).length+' ok'), (wd.unhealed||[]).length?'neg':'pos');
+ if(Object.keys(hon).length) push('✅ honesty', hon.ok?'clean':((hon.flags||[]).length+' flag'+((hon.flags||[]).length>1?'s':'')), hon.ok?'pos':'neg');
+ el.innerHTML=chips.join('')||'<span class="mut">gathering signals…</span>';
+}
+// ---- "Quant" strip: metrics real algo dashboards lead with, derived from the
+// tournament board (160 strats), the trade tape, pairs/macd5m stances, legs W/L,
+// pipeline PM legs, and fleet sparks (session drawdown). Refresh 20s. ----
+async function loadQuant(){
+ if(document.hidden)return;
+ const el=$('glance2'); if(!el)return;
+ const J=async p=>{ try{ return await (await fetch(p+'?t='+Date.now())).json(); }catch(e){ return {}; } };
+ const [tr,pr,m5,lg,pl]=await Promise.all([J('trades.json'),J('pairs.json'),J('macd5m.json'),J('legs.json'),J('pipeline.json')]);
+ const chips=[];
+ const push=(lab,val,c)=>{ if(val!=null&&val!=='') chips.push(`<span class="gchip"><span class="gl">${lab}</span><span class="gv ${c||''}">${val}</span></span>`); };
+ const med=a=>{ if(!a.length)return null; const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+ // --- tournament cohorts: does structure beat noise? ---
+ const board=(TOURN&&TOURN.board)||[];
+ if(board.length){
+  const smart=board.filter(b=>b.smart).map(b=>+b.ret_pct), dir=board.filter(b=>!b.smart).map(b=>+b.ret_pct);
+  const ms=med(smart), md=med(dir);
+  if(ms!=null) push('🧠 EDGE med ret', (ms>0?'+':'')+ms.toFixed(1)+'% ('+smart.length+')', cls(ms));
+  if(md!=null) push('🎲 DIR med ret', (md>0?'+':'')+md.toFixed(1)+'% ('+dir.length+')', cls(md));
+  const prof=board.filter(b=>+b.ret_pct>0).length;
+  push('📈 breadth', prof+'/'+board.length+' profitable ('+Math.round(prof/board.length*100)+'%)', prof/board.length>.5?'pos':'neg');
+  const act=board.filter(b=>b.pos==='active'||b.pos==='LONG'||b.pos==='SHORT').length;
+  push('🎬 in-position', act+'/'+board.length, 'mut');
+ }
+ // --- trade tape: rate, flow tilt, most active ---
+ const trades=(tr.trades||[]);
+ if(trades.length){
+  const now=Date.now(), h24=trades.filter(x=>now-new Date(x.t).getTime()<86400e3);
+  push('🔥 trades 24h', h24.length+' ('+(h24.length/24).toFixed(1)+'/hr)', 'mut');
+  const last=trades.slice(0,100), buys=last.filter(x=>x.side==='BUY').length;
+  push('↔️ flow tilt', buys+'% buy / '+(last.length-buys)+'% sell (last '+last.length+')', buys>60?'pos':buys<40?'neg':'mut');
+  const cnt={}; h24.forEach(x=>cnt[x.acct]=(cnt[x.acct]||0)+1);
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  if(top) push('🏦 most active', top[0]+' · '+top[1], 'mut');
+ }
+ // --- stances ---
+ if(pr.state) push('⚖️ pairs book', pr.state+(pr.pnl!=null?' · $'+sgn(pr.pnl):''), cls(pr.pnl));
+ if(m5.rows&&m5.rows.length) push('📐 MACD-5m stance', m5.rows.map(r=>r.coin+' '+r.target).join(' · '), 'mut');
+ // --- legs W/L aggregate ---
+ if(lg.legs&&lg.legs.length){ const w=lg.legs.reduce((s,x)=>s+(+x.wins||0),0), l=lg.legs.reduce((s,x)=>s+(+x.losses||0),0);
+  push('🦵 legs W-L', w+'-'+l, w>=l?'pos':'neg'); }
+ // --- best polymarket leg (pipeline) ---
+ const pleg=((pl.bot_legs||{}).legs||[])[0];
+ if(pleg) push('🎯 top PM leg', pleg.leg+' $'+sgn(pleg.pnl)+' · '+pleg.winpct+'%w (n='+pleg.n+')', cls(pleg.pnl));
+ // --- worst session drawdown across fleet sparks ---
+ const fleet=FLEET||[]; let wdd=null, wlab='';
+ fleet.forEach(a=>{ const s=a.spark||[]; if(s.length<2)return; let pk=s[0], dd=0;
+  s.forEach(v=>{ pk=Math.max(pk,v); if(pk>0) dd=Math.min(dd,(v-pk)/pk); });
+  if(wdd==null||dd<wdd){ wdd=dd; wlab=a.label; } });
+ if(wdd!=null) push('🕳 worst sess DD', wlab+' '+(wdd*100).toFixed(1)+'%', wdd<-0.05?'neg':'mut');
+ el.innerHTML='<span class="gchip" style="border-color:#252a3a"><span class="gl">row</span><span class="gv" style="color:#9aa6e0">QUANT</span></span>'
+  +(chips.join('')||'<span class="mut">no quant data yet…</span>');
+}
+// ---- Mind: per-bot advice engine. Deterministic rules over the cached live feeds
+// (FLEET/FUNDING/TOURN/WD/HON) — encodes the project's hard-won lessons (carry sign,
+// beat-the-control, leverage, uPnL drag, small-n luck). $0, no LLM, honest by design. ----
+function loadMind(){
+ const el=$('mind'); if(!el)return;
+ const adv=[];  // [severity 0=crit 1=warn 2=info 3=good, who, what]
+ const fleet=FLEET||[], f=FUNDING||{}, board=(TOURN&&TOURN.board)||[], wd=WD||{}, hon=HON||{};
+ // --- ops first: a broken guard outranks any trading signal ---
+ (wd.unhealed||[]).forEach(j=>adv.push([0,'watchdog','job UNHEALED: '+j+' — self-heal failed, needs a hand (kickstart it)']));
+ (hon.flags||[]).forEach(x=>adv.push([0,'honesty','flag: '+x+' — a number on this page may be fabricated/stale']));
+ // --- funding-carry book: the sign rule (short-perp collects POSITIVE funding) ---
+ (f.carries||[]).forEach(c=>{
+  if(c.side==='short-perp'&&c.ann_pct<-15) adv.push([c.ann_pct<-100?0:1,'carry '+c.sym,'short-perp into '+c.ann_pct+'%/yr NEGATIVE funding — the leg PAYS to hold; close or flip (carry logic backwards)']);
+  if(c.side==='long-perp'&&c.ann_pct>15) adv.push([1,'carry '+c.sym,'long-perp into +'+c.ann_pct+'%/yr positive funding — paying, not collecting']);
+ });
+ // --- fleet accounts ---
+ fleet.forEach(a=>{
+  if(a.equity==null){ adv.push([1,a.label,'not responding — feed dead or account gone']); return; }
+  if((a.leverage||0)>3) adv.push([0,a.label,'leverage '+a.leverage+'x — liquidation territory; delever (unlevered is the rule)']);
+  if(a.equity>0&&a.unrealized!=null&&a.unrealized/a.equity<-0.05) adv.push([1,a.label,'uPnL drag $'+sgn(a.unrealized)+' ('+(a.unrealized/a.equity*100).toFixed(1)+'% of equity) — open losers doing the damage; review exits']);
+  if((a.verdict||'').toLowerCase().includes('trail')) adv.push([1,a.label,'trailing its random-entry control — no demonstrated edge; beating control is the only real test']);
+  if(a.pnl_pct!=null&&a.pnl_pct<-8) adv.push([1,a.label,'down '+a.pnl_pct+'% — past a review threshold; is the thesis broken or is this variance?']);
+ });
+ // --- tournament: luck vs structure ---
+ const dirHot=board.filter(b=>!b.smart&&+b.ret_pct>30).sort((a,b)=>b.ret_pct-a.ret_pct)[0];
+ if(dirHot) adv.push([2,dirHot.name,'directional leg up +'+dirHot.ret_pct+'% — treat as LUCK not skill (no structural payer); do not size it']);
+ const smartNeg=board.filter(b=>b.smart&&+b.ret_pct<-10).sort((a,b)=>a.ret_pct-b.ret_pct)[0];
+ if(smartNeg) adv.push([2,smartNeg.name,'EDGE-class leg down '+smartNeg.ret_pct+'% — structure should not bleed this hard; check the mechanism still exists']);
+ const lead=board[0];
+ if(lead&&lead.smart&&+lead.winpct>85&&+lead.cyc>5000) adv.push([3,lead.name,'leader with '+lead.winpct+'% win over '+lead.cyc+' cycles — structural and large-n; the one worth studying']);
+ // --- render, severity-ranked, top 12 ---
+ const SEV=['crit','warn','info','good'], LAB=['CRIT','WARN','INFO','GOOD'];
+ adv.sort((a,b)=>a[0]-b[0]);
+ el.innerHTML='<div class="fchdr">🧠 Mind <span class="mut" style="font-size:11px">· per-bot advice · deterministic rules over live feeds · not an oracle — verify before acting</span></div>'
+  +(adv.slice(0,12).map(a=>`<div class="adv"><span class="sev ${SEV[a[0]]}">${LAB[a[0]]}</span><span class="who">${a[1]}</span><span class="what">${a[2]}</span></div>`).join('')
+    ||'<span class="mut">no advice — every bot inside its guardrails</span>')
+  +(adv.length>12?`<div class="mut" style="font-size:11px;margin-top:6px">+${adv.length-12} more (lower severity)</div>`:'');
+}
+// ---- Derivs · Macro strip (keyless marketx.json: Deribit basis/IV/skew, Fear&Greed, gas, dominance) ----
+async function loadMarketX(){
+ if(document.hidden)return;
+ try{
+  const d=await (await fetch('marketx.json?t='+Date.now())).json();
+  MARKETX=d;  // cache for the at-a-glance strip
+  const stale=(Date.now()/1000-(d.ts||0))>420;  // >7m ⇒ 2-min daemon likely down
+  const it=[];
+  for(const c of ['BTC','ETH']){ const x=d.crypto&&d.crypto[c]; if(!x)continue;
+   it.push(`<div class="mx"><span class="s">${c} basis</span><span class="p ${cls(x.basis_annual_pct)}">${x.basis_annual_pct==null?'—':(x.basis_annual_pct>0?'+':'')+x.basis_annual_pct+'%/yr'}</span><span class="c mut">${x.basis_expiry||''}</span></div>`);
+   it.push(`<div class="mx"><span class="s">${c} ATM IV</span><span class="p">${x.atm_iv==null?'—':x.atm_iv+'%'}</span><span class="c mut">skew ${x.skew_90_110==null?'—':x.skew_90_110}</span></div>`);
+  }
+  if(d.fear_greed) it.push(`<div class="mx"><span class="s">Fear&Greed</span><span class="p ${d.fear_greed.value<40?'neg':d.fear_greed.value>60?'pos':''}">${d.fear_greed.value}</span><span class="c mut">${d.fear_greed.label}</span></div>`);
+  if(d.global) it.push(`<div class="mx"><span class="s">BTC dom</span><span class="p">${d.global.btc_dominance}%</span><span class="c ${cls(d.global.mcap_change_24h)}">mcap ${d.global.mcap_change_24h>0?'+':''}${d.global.mcap_change_24h}%</span></div>`);
+  if(d.btc_gas) it.push(`<div class="mx"><span class="s">BTC gas</span><span class="p">${d.btc_gas.fastest}<span class="c mut"> sat/vB</span></span><span class="c mut">~30m ${d.btc_gas.half_hour}</span></div>`);
+  $('mxrow').innerHTML=it.join('')||'<span class="mut">no data</span>';
+  $('mxrow').parentElement.classList.toggle('stale',stale);
+  renderBoard(d);
+ }catch(e){ $('mxrow').innerHTML='<span class="mut">derivs feed unavailable</span>'; }
+}
+// ---- per-tab freshness badges (Last-Modified of each panel's feed) ----
+const FEEDMAP={overview:'fleet.json',funding:'funding.json',pairs:'pairs.json',macd5m:'macd5m.json',legs:'legs.json',tournament:'tournament.json',pipeline:'pipeline.json',chart:'candles.json',trades:'trades.json'};
+async function updateFreshness(){
+ if(document.hidden)return;
+ for(const [id,feed] of Object.entries(FEEDMAP)){
+  const btn=document.querySelector(`.tab[data-id="${id}"]`); if(!btn)continue;
+  let age=null;
+  try{ const r=await fetch(feed+'?t='+Date.now(),{method:'HEAD'}); const lm=r.headers.get('last-modified'); if(lm)age=(Date.now()-new Date(lm).getTime())/1000; }catch(e){}
+  let b=btn.querySelector('.fb'); if(!b){ b=document.createElement('span'); b.className='fb'; btn.appendChild(b); }
+  if(age==null||age<0){ b.className='fb dead'; b.textContent='?'; }
+  else{ b.className='fb '+(age<120?'ok':age<600?'old':'dead'); b.textContent=age<60?Math.round(age)+'s':Math.round(age/60)+'m'; }
+ }
+}
+async function loadFleet(){
+ if(document.hidden)return;
+ let d; try{ d=await (await fetch('fleet.json?t='+Date.now())).json() }catch(e){ $('cards').innerHTML='fleet feed unavailable'; return }
+ if(d.error){ $('cards').innerHTML='UTA error: '+d.error; return }
+ $('age').textContent='updated '+new Date(d.ts*1000).toLocaleTimeString();
+ // guard feeds → status chips + a prominent alert banner (a no-TCC fallback channel for the
+ // launchd guards, redundant to the iMessage page).
+ let wd={}, hon={};
+ try{ wd=await (await fetch('watchdog.json?t='+Date.now())).json(); }catch(e){}
+ try{ hon=await (await fetch('honesty.json?t='+Date.now())).json(); }catch(e){}
+ WD=wd; HON=hon;  // cache for the at-a-glance strip
+ { const bad=(wd.unhealed||[]).length;
+   $('wd').innerHTML = Object.keys(wd).length ? (bad ? '<span class="neg">🛡 watchdog: '+bad+' UNHEALED</span>'
+     : ((wd.healed||[]).length ? '<span class="pos">🛡 watchdog: just healed '+wd.healed.length+'</span>'
+     : '<span class="mut">🛡 watchdog ok · '+(wd.jobs||[]).length+' monitored (self-heal + alert)</span>')) : '';
+   $('hon').innerHTML = Object.keys(hon).length ? (hon.ok ? '<span class="pos">✅ honesty ok</span>'
+     : '<span class="neg">⚠ '+(hon.flags||[]).length+' honesty flag(s)</span>') : '';
+   const issues=[...(wd.unhealed||[]), ...(hon.flags||[])], ab=$('alertbanner');
+   if(issues.length){ ab.textContent='🚨 '+issues.length+' ACTIVE ALERT'+(issues.length>1?'S':'')+' — '+issues.join('   ·   ');
+     ab.style.cssText='background:#3a1620;color:var(--r);border:1px solid #6a2030;border-radius:8px;padding:9px 13px;margin:6px 0 0;font-size:12px'; }
+   else { ab.textContent=''; ab.style.cssText=''; } }
+ const rb=$('resetbanner');
+ if(d.reset_at && (Date.now()/1000 - d.reset_at) < 3600){
+  rb.textContent='⚠ Paper sim reset at '+new Date(d.reset_at*1000).toLocaleTimeString()+' — the in-memory mock simulator wiped every account back to start cash on a backend restart. P&L restarts from here; this is an infra reset, NOT a trading loss.';
+  rb.style.cssText='background:#3a2a1e;color:var(--y);border:1px solid #5a4020;border-radius:8px;padding:8px 12px;margin:6px 0 0;font-size:12px';
+ } else { rb.textContent=''; rb.style.cssText=''; }
+ const real=(d.accounts||[]).filter(a=>a.type==='market-neutral'), mnpnl=real.reduce((s,a)=>s+(a.pnl||0),0);
+ $('cards').innerHTML=[
+  ['Total P&L','$'+sgn(d.total_pnl),cls(d.total_pnl)],
+  ['Fleet equity','$'+(+d.total_equity).toLocaleString(undefined,{maximumFractionDigits:0}),''],
+  ['Accounts',d.n_accounts,'mut'],
+  ['Market-neutral P&L','$'+sgn(mnpnl),cls(mnpnl)],
+  ['Structural · '+(d.structural_beats||0)+'/'+(d.structural_n||0)+' beat ctrl','$'+sgn(d.structural_pnl||0),cls(d.structural_pnl||0)],
+ ].map(c=>`<div class="card"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
+ FLEET=d.accounts||[]; renderRows();
+ renderMovers(); renderCurve(d.total_pnl); renderEvents(wd,hon,d);
+ $('foot').innerHTML='⚠ All paper. Honest read: every <span class="mut">structural</span> $1k book is currently <span class="neg">trailing its random-entry control</span> ('+(d.structural_beats||0)+'/'+(d.structural_n||0)+' beat ctrl) — no demonstrated edge anywhere, not even market-neutral; beating the control is the only real test. Directional rows are gross-only noise (a green day is luck). Structural books are separate $1k experiments, kept OUT of the headline total; unknown-start accounts show <span class="mut">n/a</span> (no fabricated P&L).';
+}
+// Live market ticker — keyless Binance public API, fetched straight from the
+// browser (same source chart.html uses). Spot price + 24h change for the majors,
+// plus perp funding for BTC/ETH (best-effort; futures endpoint may be geo-blocked
+// from some networks, in which case funding is silently omitted). Refresh 10s.
+const MKT=[['BTC','BTCUSDT'],['ETH','ETHUSDT'],['SOL','SOLUSDT'],['BNB','BNBUSDT'],['XRP','XRPUSDT'],['DOGE','DOGEUSDT']];
+async function loadMarket(){
+ if(document.hidden)return;
+ try{
+  const syms=encodeURIComponent(JSON.stringify(MKT.map(m=>m[1])));
+  const arr=await (await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols='+syms)).json();
+  const by={}; arr.forEach(t=>by[t.symbol]=t);
+  let fund={};
+  try{
+   const fr=await Promise.all(['BTCUSDT','ETHUSDT'].map(s=>
+     fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol='+s).then(x=>x.json())));
+   fr.forEach(f=>{ if(f&&f.symbol) fund[f.symbol]=+f.lastFundingRate; });
+  }catch(e){}
+  const html=MKT.map(([name,sym])=>{
+   const t=by[sym]; if(!t) return '';
+   const px=+t.lastPrice, chg=+t.priceChangePercent;
+   const pxs=px>=1000?px.toLocaleString(undefined,{maximumFractionDigits:0})
+     :px.toLocaleString(undefined,{maximumFractionDigits:px>=1?2:5});
+   const fr=fund[sym]!=null?` · f ${(fund[sym]*100).toFixed(3)}%`:'';
+   return `<div class="tk"><span class="s">${name}${fr}</span><span class="p">$${pxs}</span>`
+     +`<span class="c ${cls(chg)}">${chg>0?'+':''}${chg.toFixed(2)}%</span></div>`;
+  }).join('');
+  $('ticker').innerHTML=html||'<span class="mut">market unavailable</span>';
+ }catch(e){ $('ticker').innerHTML='<span class="mut">market feed unavailable — Binance unreachable from your browser</span>'; }
+}
+loadMarket(); setInterval(loadMarket, 10000);
+loadMarketX(); setInterval(loadMarketX, 30000);
+loadFunding(); setInterval(loadFunding, 15000);
+loadGlance(); setInterval(loadGlance, 8000);
+loadQuant(); setInterval(loadQuant, 20000);
+setTimeout(loadMind,1500); setInterval(loadMind, 10000);  // after first caches fill
+updateFreshness(); setInterval(updateFreshness, 30000);
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1); if(h&&TABS.find(t=>t.id===h))showTab(h)});
+if(location.hash.slice(1)) showTab(location.hash.slice(1));
+loadFleet(); setInterval(loadFleet, 8000);
+// pause-when-hidden: loaders early-return while the tab is backgrounded (saves the
+// flaky tunnel); refresh everything immediately when it comes back to the foreground.
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ loadFleet(); loadMarket(); loadMarketX(); loadFunding(); loadGlance(); loadQuant(); loadMind(); updateFreshness(); } });
+</script></body></html>
