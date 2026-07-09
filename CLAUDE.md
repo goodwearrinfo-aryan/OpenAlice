@@ -60,10 +60,13 @@ Notes:
   config does the routing. But Vitest transpiles via esbuild, which does
   NOT enforce strict types. Tests catch behavior, not type drift.
 - **`services/uta` standalone `pnpm -F @traderalice/uta-service typecheck`
-  currently has known errors** tracked in
-  [ANG-65](https://linear.app/angelkawaii/issue/ANG-65/) — root cause is
-  ctx-type leak from Alice's `EngineContext` into UTA's route handlers.
-  Don't run it as a gate until that's fixed.
+  is now clean** — run it as a gate if you touched `services/uta/`. The
+  original [ANG-65](https://linear.app/angelkawaii/issue/ANG-65/) ctx-type
+  leak (Alice's `EngineContext` bleeding into UTA route handlers) was
+  resolved by the dedicated `UTAEngineContext` in
+  `services/uta/src/types.ts`; the last remaining error was an upstream
+  `@alpacahq/alpaca-trade-api` typing quirk (`getOrders` marks every
+  option required) worked around the same way `getAssets` already is.
 
 ### Cross-platform note
 
