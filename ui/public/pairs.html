@@ -42,8 +42,8 @@ async function load(){
  ].map(c=>`<div class="card"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
  const zp=Math.max(0,Math.min(100, 50 + (d.z/4)*50));  // map z in [-4,4] to 0-100%
  $('zdot').style.left=zp+'%'; $('zdot').style.background=Math.abs(d.z)>=2?'#f38ba8':'#89b4fa';
- $('rows').innerHTML=(d.positions||[]).map(p=>{const u=(+p.qty)*(+p.mark);return
-  `<tr><td>${p.coin}</td><td><span class="tag">${(p.side||'').toUpperCase()}</span></td><td>${p.qty}</td><td>$${Math.round(u).toLocaleString()}</td><td class="${cls(p.uPnL)}">$${sgn(p.uPnL)}</td></tr>`;}).join('') || '<tr><td colspan=5 class=mut>flat — waiting for |z| > 2</td></tr>';
+ $('rows').innerHTML=(d.positions||[]).map(p=>{const u=(+p.qty)*(+p.mark);
+  return `<tr><td>${p.coin}</td><td><span class="tag">${(p.side||'').toUpperCase()}</span></td><td>${p.qty}</td><td>$${Math.round(u).toLocaleString()}</td><td class="${cls(p.uPnL)}">$${sgn(p.uPnL)}</td></tr>`;}).join('') || '<tr><td colspan=5 class=mut>flat — waiting for |z| > 2</td></tr>';
  $('note').textContent='⚠ '+(d.note||'');
 }
 load(); setInterval(load, 8000);
