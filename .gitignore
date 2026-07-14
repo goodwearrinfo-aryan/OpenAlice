@@ -17,3 +17,5 @@ logs/
 *.log
 ui/public/*.json
 ui/public/tunnel_url.txt
+__pycache__/
+*.pyc
