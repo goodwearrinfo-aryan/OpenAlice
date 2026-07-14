@@ -112,7 +112,9 @@ export default defineConfig({
     // cockpit is unreachable on the LAN. Binding '::' accepts IPv6 (::1), IPv4
     // (127.0.0.1, via IPv4-mapped dual-stack) AND the LAN — so localhost,
     // 127.0.0.1, and the phone all work. Reversible: delete this line.
-    host: '::',
+    // OPENALICE_UI_HOST overrides for IPv6-less environments (cloud/agent
+    // containers reject '::' with EAFNOSUPPORT — set 127.0.0.1 there).
+    host: process.env.OPENALICE_UI_HOST || '::',
     // The bot daemons rewrite public/*.json feeds every few seconds. Without this,
     // Vite full-reloads EVERY open page (incl. /chat) on each write — the cockpit
     // panels poll their JSON themselves, so the dev server never needs to react to it.
