@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OPENALICE · DISCIPLINED &lt;GO&gt;</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--amberdim:#9c6f1e;--white:#eaeaea;
+        --grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);
+       font:13px/1.35 'SF Mono','Consolas','Menlo','Monaco','Courier New',monospace}
+  .top{display:flex;align-items:center;gap:12px;background:#000;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  .cmd{color:var(--amberdim)}.cmd b{color:var(--amber)}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--grn)}
+  .blink{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:bl 1.1s steps(2,end) infinite}
+  @keyframes bl{50%{opacity:.15}}
+  .strip{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .st{padding:7px 16px;border-right:1px solid var(--line)}
+  .st .l{color:var(--cyan);font-size:11px}.st .v{color:var(--white);font-weight:700;font-size:15px}
+  .sect{color:var(--orange);text-transform:uppercase;letter-spacing:1.5px;font-size:12px;padding:8px 12px 4px;border-left:3px solid var(--orange)}
+  table{width:100%;border-collapse:collapse}
+  th{color:var(--cyan);text-align:left;text-transform:uppercase;font-size:11px;font-weight:400;padding:5px 12px;border-bottom:1px solid var(--orange)}
+  th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:6px 12px;border-bottom:1px solid var(--line)}
+  tr:hover td{background:#0e0b03}
+  .nm{color:var(--amber)}.pos{color:var(--grn)}.neg{color:var(--red)}.dim{color:var(--dim)}
+  .pl{color:var(--grn)}.sh{color:var(--red)}.fl{color:var(--dim)}
+  .vd-KEEP{color:var(--grn)}.vd-KILL{color:var(--red)}.vd-unproven{color:var(--amber)}.vd-n20{color:var(--dim)}
+  .foot{border-top:1px solid var(--orange);color:var(--amberdim);padding:7px 12px;font-size:11px;display:flex;gap:22px;flex-wrap:wrap}
+  a{color:var(--cyan);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">OPENALICE</span>
+  <span class="cmd">DISCIPLINED &lt;<b>GO</b>&gt; &nbsp; SAME SIGNALS · TOP-TRADER RULEBOOK · LIVE PAPER</span>
+  <span class="live"><span class="blink"></span><span id="ts">--:--:--</span></span>
+</div>
+<div class="strip" id="strip"></div>
+<div class="sect">Legs under discipline — EMA200 regime · 1×ATR stop / RR×ATR target · 1% risk · maker fees</div>
+<table>
+  <thead><tr><th>LEG</th><th>POS</th><th>BRACKET · sl→entry→tp</th><th class="r">EQUITY</th><th class="r">P&amp;L $</th><th class="r">uPnL</th><th class="r">N</th><th class="r">WIN%</th><th class="r">AVG R</th><th class="r">t</th><th class="r">BT eq%</th><th>VERDICT</th></tr></thead>
+  <tbody id="legs"><tr><td colspan="12" class="dim">connecting feed… (disciplined_live.py writes disciplined.json)</td></tr></tbody>
+</table>
+<div class="foot">
+  <span>HONEST: LIVE PAPER RECORD FROM <b id="since">—</b>, CLOSED 1h BARS ONLY, NO LOOKAHEAD. BT COLUMN IS THE SEEDED 30d BACKTEST — REFERENCE, NOT RECORD. VERDICT NEEDS n≥20 AND t≥2; UNTIL THEN NOTHING HERE IS EDGE.</span>
+  <span><a href="/legs.html">LEGS</a> · <a href="/pipeline.html">PIPELINE</a> · <a href="/tournament.html">TOURNAMENT</a></span>
+</div>
+<script>
+const f=n=>{const x=Number(n);return isFinite(x)?x.toLocaleString(undefined,{maximumFractionDigits:0}):'—'};
+const f2=n=>{const x=Number(n);return isFinite(x)?(x>0?'+':'')+x.toFixed(2):'—'};
+const cls=n=>Number(n)>0?'pos':(Number(n)<0?'neg':'dim');
+async function tick(){
+  let d; try{ d=await (await fetch('/disciplined.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
+  document.getElementById('ts').textContent=new Date(d.ts*1000).toLocaleTimeString();
+  document.getElementById('since').textContent=new Date(d.started*1000).toLocaleDateString();
+  document.getElementById('strip').innerHTML=`<div class="st"><div class="l">BTC</div><div class="v">$${f(d.btc)}</div></div>
+    <div class="st"><div class="l">ATR(14)</div><div class="v">$${f(d.atr)}</div></div>
+    <div class="st"><div class="l">REWARD:RISK</div><div class="v">${d.rr}:1</div></div>
+    <div class="st"><div class="l">COST RT</div><div class="v">${d.fee_bps}bps</div></div>
+    <div class="st"><div class="l">RISK/TRADE</div><div class="v">${d.risk_pct}%</div></div>
+    <div class="st"><div class="l">BOOK P&amp;L</div><div class="v ${cls(d.book_pnl)}">$${f2(d.book_pnl)}</div></div>
+    <div class="st"><div class="l">VENUE</div><div class="v">${(d.venue||'').toUpperCase()}</div></div>`;
+  document.getElementById('legs').innerHTML=(d.legs||[]).map(l=>{
+    const pc=l.pos==='LONG'?'pl':(l.pos==='SHORT'?'sh':'fl');
+    const bracket=l.entry?`<span class="neg">${f(l.stop)}</span> → <span class="nm">${f(l.entry)}</span> → <span class="pos">${f(l.target)}</span>`:'<span class="fl">— flat (waiting for a qualified signal)</span>';
+    const vd=l.verdict==='n<20'?'vd-n20':('vd-'+l.verdict);
+    return `<tr>
+      <td class="nm">${l.leg}</td>
+      <td><span class="${pc}">${l.pos.toUpperCase()}</span></td>
+      <td style="font-size:11px">${bracket}</td>
+      <td class="r dim">$${f(l.equity)}</td>
+      <td class="r ${cls(l.pnl)}">${f2(l.pnl)}</td>
+      <td class="r ${cls(l.upnl)}">${f2(l.upnl)}</td>
+      <td class="r dim">${l.n}</td>
+      <td class="r">${l.n?l.winpct+'%':'—'}</td>
+      <td class="r ${cls(l.avg_r)}">${l.n?f2(l.avg_r):'—'}</td>
+      <td class="r dim">${l.n?l.t:'—'}</td>
+      <td class="r dim">${f2(l.bt_eq)}</td>
+      <td class="${vd}">${l.verdict}</td>
+    </tr>`;}).join('')||'<tr><td colspan=12 class=dim>no data</td></tr>';
+}
+tick(); setInterval(tick,10000);
+</script>
+</body>
+</html>

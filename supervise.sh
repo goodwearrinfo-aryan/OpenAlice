@@ -24,6 +24,10 @@ echo "[supervise] $(date) starting pnpm dev" >> "$LOG"
 pnpm dev >> "$LOG" 2>&1 &
 DEV=$!
 
+# disciplined legs paper runner (writes ui/public/disciplined.json for the tab)
+pkill -f disciplined_live.py 2>/dev/null
+python3 "$APP/disciplined_live.py" >> /tmp/oa_disciplined.log 2>&1 &
+
 # Post-start worker: wait for UTA, re-open position if flat, then tick P&L.
 (
   for i in $(seq 1 40); do

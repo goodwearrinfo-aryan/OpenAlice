@@ -137,6 +137,7 @@ const TABS=[
  {id:'pairs',    label:'⚖️ Pairs',      src:'pairs.html'},
  {id:'macd5m',   label:'📈 MACD-5m',    src:'macd5m.html'},
  {id:'legs',     label:'🦵 Legs',       src:'legs.html'},
+ {id:'disciplined',label:'🎖️ Disciplined',src:'disciplined.html'},
  {id:'tournament',label:'🏆 Tournament',src:'tournament.html'},
  {id:'pipeline', label:'🧩 Pipeline',   src:'pipeline.html'},
  {id:'chart',    label:'📊 Chart',      src:'chart.html'},
@@ -440,7 +441,7 @@ async function loadMarketX(){
  }catch(e){ $('mxrow').innerHTML='<span class="mut">derivs feed unavailable</span>'; }
 }
 // ---- per-tab freshness badges (Last-Modified of each panel's feed) ----
-const FEEDMAP={overview:'fleet.json',funding:'funding.json',pairs:'pairs.json',macd5m:'macd5m.json',legs:'legs.json',tournament:'tournament.json',pipeline:'pipeline.json',chart:'candles.json',trades:'trades.json'};
+const FEEDMAP={overview:'fleet.json',funding:'funding.json',pairs:'pairs.json',macd5m:'macd5m.json',legs:'legs.json',disciplined:'disciplined.json',tournament:'tournament.json',pipeline:'pipeline.json',chart:'candles.json',trades:'trades.json'};
 async function updateFreshness(){
  if(document.hidden)return;
  for(const [id,feed] of Object.entries(FEEDMAP)){
