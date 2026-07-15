@@ -17,3 +17,4 @@ logs/
 *.log
 ui/public/*.json
 ui/public/tunnel_url.txt
+*.tsbuildinfo
