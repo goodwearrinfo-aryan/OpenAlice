@@ -17,6 +17,7 @@ const VENDORS_BY_BASEURL: Array<[RegExp, CredentialVendor]> = [
   [/minimaxi\.com|minimax\.io/i, 'minimax'],
   [/moonshot\.cn|moonshot\.ai/i, 'kimi'],
   [/deepseek\.com/i, 'deepseek'],
+  [/localhost:11434|127\.0\.0\.1:11434/i, 'ollama'],
 ]
 
 /**

@@ -295,6 +295,40 @@ export const DEEPSEEK: PresetDef = {
   writeOnlyFields: ['apiKey'],
 }
 
+// ==================== Third-party: Ollama (local) ====================
+
+// Ollama has no auth and speaks OpenAI Chat Completions on its /v1 route, so
+// only opencode and pi (the OpenAI-compatible-against-arbitrary-endpoints
+// agents) can drive it — claude/codex are locked to their vendor's proprietary
+// wire and can't be pointed at a local runtime at all.
+export const OLLAMA: PresetDef = {
+  id: 'ollama',
+  label: 'Ollama (Local)',
+  description: 'Local models via Ollama’s OpenAI-compatible endpoint — no API key, runs on your machine',
+  category: 'third-party',
+  defaultName: 'Ollama (Local)',
+  hint: 'Only opencode and pi can drive this (claude/codex are locked to their vendor APIs). Start the Ollama server and `ollama pull <model>` first. No API key required.',
+  zodSchema: z.object({
+    backend: z.literal('vercel-ai-sdk'),
+    provider: z.literal('openai-compatible'),
+    loginMethod: z.literal('none'),
+    baseUrl: z.string().default('http://localhost:11434/v1').describe('Ollama endpoint'),
+    model: z.string().default('llama3.3').describe('Model'),
+    apiKey: z.string().optional().describe('Not required by Ollama — leave blank'),
+  }),
+  regions: [
+    { id: 'local', label: 'Local (localhost:11434)', wires: {
+      'openai-chat': 'http://localhost:11434/v1',
+    } },
+  ],
+  models: [
+    { id: 'llama3.3', label: 'Llama 3.3' },
+    { id: 'qwen2.5-coder', label: 'Qwen 2.5 Coder' },
+    { id: 'deepseek-r1', label: 'DeepSeek R1' },
+  ],
+  writeOnlyFields: [],
+}
+
 // ==================== Custom ====================
 
 export const CUSTOM: PresetDef = {
@@ -328,6 +362,7 @@ export const PRESET_CATALOG: PresetDef[] = [
   GLM,
   KIMI,
   DEEPSEEK,
+  OLLAMA,
   CUSTOM,
 ]
 
@@ -348,4 +383,5 @@ export const DEFAULT_MODEL_BY_VENDOR: Record<string, string> = {
   glm: 'glm-5.2',
   kimi: 'kimi-k2.7-code',
   deepseek: 'deepseek-v4-pro',
+  ollama: 'llama3.3',
 }
