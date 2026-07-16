@@ -1,0 +1,23 @@
+import http from 'http';
+import {JSDOM} from 'jsdom';
+const get=u=>new Promise(res=>http.get(u,r=>{let b='';r.on('data',c=>b+=c);r.on('end',()=>res(b))}));
+const html=await get('http://127.0.0.1:8090/');
+const js=html.match(/<script>([\s\S]*?function render[\s\S]*?)<\/script>/)[1];
+const dom=new JSDOM('<div id="grid">loading…</div><div id="clock"></div><div id="wdpill"></div><div id="cryptobar"></div><div id="hpnl"></div><div id="srccount"></div>',{runScripts:"outside-only"});
+const w=dom.window;
+w.EventSource=class{constructor(){}addEventListener(){}onmessage(){}};
+w.LightweightCharts={createChart:()=>({addCandlestickSeries:()=>({setData(){},update(){}}),addLineSeries:()=>({setData(){},update(){}}),timeScale:()=>({fitContent(){}}),applyOptions(){},resize(){}})};
+w.fetch=async()=>({json:async()=>JSON.parse(await get('http://127.0.0.1:8090/api/state'))});
+const d=JSON.parse(await get('http://127.0.0.1:8090/api/state'));
+w.eval(js+"\n;window.__r=render;window.__paint=paint;");
+w.__r(d);
+// simulate two ticks to exercise paint() diff
+w.__r(d);
+const grid=w.document.getElementById('grid');
+console.log('cards rendered:', grid.children.length);
+console.log('literal ${ in grid:', (grid.innerHTML.match(/\$\{/g)||[]).length);
+const tm=[...grid.children].find(c=>c.id.includes('tournament'));
+console.log('tournament card id:', tm&&tm.id);
+console.log('tournament text:', tm&&tm.textContent.replace(/\s+/g,' ').slice(0,180));
+const ids=[...grid.children].map(c=>c.id).filter(Boolean);
+console.log('total cards:', ids.length, '| sample:', ids.slice(0,4).join(', '));
