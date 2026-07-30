@@ -17,3 +17,9 @@ logs/
 *.log
 ui/public/*.json
 ui/public/tunnel_url.txt
+
+# build artifacts (2026-07-30)
+dist/
+**/dist/
+.turbo/
+*.tsbuildinfo

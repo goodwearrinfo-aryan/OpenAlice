@@ -33,6 +33,7 @@
   .rk{color:var(--amberdim)} .nm{color:var(--amber)} .tag{color:var(--dim);font-size:11px}
   .pos{color:var(--grn)}.neg{color:var(--red)}.dim{color:var(--dim)}
   .EDGE{color:var(--grn);font-weight:700}.DIR{color:var(--dim)}.BOT{color:var(--cyan);font-weight:700}
+  .LLM{color:#c084fc;font-weight:700}
   .pill{color:var(--grn)}.pillS{color:var(--red)}.pillF{color:var(--dim)}
   .foot{border-top:1px solid var(--orange);color:var(--amberdim);padding:7px 12px;font-size:11px;display:flex;gap:22px;flex-wrap:wrap}
   .foot b{color:var(--amber)} a{color:var(--cyan);text-decoration:none}
@@ -52,7 +53,7 @@
 </table>
 <div class="foot">
   <span>STATUS <b id="leader">—</b></span>
-  <span>EDGE = structural (real +EV) · DIR = directional (coin-flip)</span>
+  <span>LLM = AI-decided (real model) · EDGE = structural (real +EV) · DIR = directional (coin-flip)</span>
   <span>WATCH <b>WIN%</b> OVER DAYS, NOT RANK OVER SECONDS</span>
   <span><a href="/pipeline.html">PIPELINE</a> · <a href="/legs.html">LEGS</a></span>
 </div>
@@ -73,7 +74,7 @@ async function tick(){
     <tr class="${i===0?'lead':''}">
       <td class="rk">${String(i+1).padStart(2,'0')}</td>
       <td class="nm">${b.name}</td>
-      <td><span class="${b.real?'BOT':b.smart?'EDGE':'DIR'}">${b.real?'BOT':b.smart?'EDGE':'DIR'}</span></td>
+      <td><span class="${b.llm?'LLM':b.real?'BOT':b.smart?'EDGE':'DIR'}">${b.llm?'LLM':b.real?'BOT':b.smart?'EDGE':'DIR'}</span></td>
       <td><span class="${pc(b.pos)}">${b.pos.toUpperCase()}</span> <span class="tag">${b.tag}</span></td>
       <td class="r ${cls(b.ret_pct)}">${f2(b.ret_pct)}</td>
       <td class="r">${b.winpct.toFixed(1)}</td>
