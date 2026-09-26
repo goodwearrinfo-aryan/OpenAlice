@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="theme-color" content="#000000"/>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+<title>OPENALICE · CHART</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--white:#eaeaea;--grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);font:12px/1.35 'SF Mono',Menlo,monospace}
+  .top{display:flex;align-items:center;gap:12px;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  .live{margin-left:auto;color:var(--grn)}.tf a{color:var(--dim)}.tf a.on{color:var(--grn);font-weight:700}
+  canvas{display:block;width:100%;background:#000}
+  .foot{border-top:1px solid var(--orange);color:#6b4a10;padding:6px 12px;display:flex;gap:18px;flex-wrap:wrap}
+  a{color:var(--cyan);text-decoration:none}
+.nav a{color:var(--dim);text-decoration:none}.nav a.on{color:var(--grn);font-weight:700}
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">OPENALICE</span>
+  <span id="ttl">BTC/USDT · 1h · live feed</span>
+  <span class="tf">
+    <a href="#" data-tf="1m">1m</a> · <a href="#" data-tf="5m">5m</a> · <a href="#" data-tf="1h" class="on">1h</a>
+  </span>
+  <span class="nav"><a href="/pipeline.html" data-p="pipeline">PIPELINE</a> · <a href="/chart.html" data-p="chart" class="on">CHART</a> · <a href="/legs.html" data-p="legs">LEGS</a> · <a href="/tournament.html" data-p="tournament">TOURNAMENT</a> · <a href="/screener.html" data-p="screener">SCREENER</a></span><span class="live" id="upd">--:--:--</span></div>
+<canvas id="px" height="340"></canvas>
+<canvas id="vol" height="70"></canvas>
+<div class="foot">
+  <span id="last">—</span><span id="chg">—</span>
+  <a href="/pipeline.html">PIPELINE</a> · <a href="/legs.html">LEGS</a> · <a href="/tournament.html">TOURNAMENT</a>
+</div>
+<script>
+const P=document.getElementById('px'), V=document.getElementById('vol');
+let TF='1h';
+const FILE={ '1m':'candles_1m.json', '5m':'candles_5m.json', '1h':'candles.json' };
+document.querySelectorAll('.tf a').forEach(a=>a.onclick=e=>{
+  e.preventDefault(); TF=a.dataset.tf;
+  document.querySelectorAll('.tf a').forEach(x=>x.classList.toggle('on',x===a));
+  document.getElementById('ttl').textContent=`BTC/USDT · ${TF} · live feed`;
+  draw();
+});
+function fit(c){const r=window.devicePixelRatio||1;c.width=c.clientWidth*r;c.height=c.getAttribute('height')*r;}
+async function draw(){
+  let d; try{ d=await(await fetch('/'+FILE[TF]+'?_='+Date.now())).json(); }catch(e){ document.getElementById('upd').textContent='NO FEED'; return; }
+  const N = TF==='1m'?120:(TF==='5m'?96:96);
+  const cs=d.candles.slice(-N);
+  const hi=Math.max(...cs.map(k=>k[2])), lo=Math.min(...cs.map(k=>k[3])), pad=(hi-lo)*0.06;
+  const H=hi+pad, L=lo-pad;
+  fit(P);fit(V);
+  const g=P.getContext('2d'), w=P.width, h=P.height, n=cs.length, bw=w/n;
+  g.clearRect(0,0,w,h);
+  // grid
+  g.strokeStyle='#141414'; g.fillStyle='#5a5a5a'; g.font=`${11*(window.devicePixelRatio||1)}px monospace`;
+  for(let i=0;i<=4;i++){const y=h*i/4; g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();
+    const price=H-(H-L)*(i/4); g.fillText(price.toLocaleString(undefined,{maximumFractionDigits:0}), 6, y-4);}
+  cs.forEach((k,i)=>{
+    const x=i*bw+bw*0.2, bwid=bw*0.6;
+    const y=v=>h-(v-L)/(H-L)*h;
+    g.strokeStyle=g.fillStyle=k[4]>=k[1]?'#46e34a':'#ff4d4d';
+    g.beginPath();g.moveTo(x+bwid/2,y(k[2]));g.lineTo(x+bwid/2,y(k[3]));g.stroke();
+    const t=y(Math.max(k[1],k[4])), b=y(Math.min(k[1],k[4]));
+    g.fillRect(x,t,bwid,Math.max(b-t,1));
+  });
+  const v=V.getContext('2d'); v.clearRect(0,0,V.width,V.height);
+  const vmax=Math.max(...cs.map(k=>k[5]));
+  cs.forEach((k,i)=>{const bh=k[5]/vmax*V.height*0.92;
+    v.fillStyle=k[4]>=k[1]?'#1d5c1f':'#5c1d1d';
+    v.fillRect(i*bw+bw*0.2, V.height-bh, bw*0.6, bh);});
+  document.getElementById('upd').textContent=(d.ts||'').slice(11);
+  const f=d.last?d.last.toLocaleString():'—'; document.getElementById('last').textContent='LAST $'+f;
+  if(cs.length>2){const c=(cs[cs.length-1][4]/cs[0][4]-1)*100;
+    const e=document.getElementById('chg');
+    e.textContent=`${TF} window ${c>=0?'+':''}${c.toFixed(2)}%`; e.style.color=c>=0?'#46e34a':'#ff4d4d';}
+}
+draw(); setInterval(draw,30000);
+addEventListener('resize',draw);
+</script>
+</body>
+</html>

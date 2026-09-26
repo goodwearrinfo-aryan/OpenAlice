@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="theme-color" content="#000000"/>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+<title>OPENALICE · TOURNAMENT</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--white:#eaeaea;--grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);font:13px/1.35 'SF Mono',Menlo,monospace}
+  .top{display:flex;align-items:center;gap:12px;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .panel{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 14px}
+  .l{color:var(--cyan);font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+  .v{color:var(--white);font-weight:700;font-size:16px;margin-top:3px}
+  .banner{display:none;padding:9px 12px;color:#e3b341;background:#241b00;border-bottom:1px solid #664d00;font-size:12px;line-height:1.5}
+  .foot{border-top:1px solid var(--orange);color:#6b4a10;padding:7px 12px;display:flex;gap:18px;flex-wrap:wrap;font-size:11px}
+  .pos{color:var(--grn)}.neg{color:var(--red)} b{color:var(--white)} a{color:var(--cyan);text-decoration:none} ul{margin:6px 0 0 18px;padding:0} li{margin:3px 0;color:var(--dim)}
+.nav a{color:var(--dim);text-decoration:none}.nav a.on{color:var(--grn);font-weight:700}
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">OPENALICE</span><span>CARRY TOURNAMENT · funding / basis / pairs</span><span class="nav"><a href="/pipeline.html" data-p="pipeline">PIPELINE</a> · <a href="/chart.html" data-p="chart">CHART</a> · <a href="/legs.html" data-p="legs">LEGS</a> · <a href="/tournament.html" data-p="tournament" class="on">TOURNAMENT</a></span><span class="dim" id="ts" style="margin-left:auto">--:--:--</span></div>
+
+<div class="banner" id="offline">
+  <b>ENGINE OFFLINE — tournament feed frozen.</b><br>
+  The tournament writer was lost in the Aug 26 fleet deletion and is not rebuilt yet.
+  Last known verdict (<i>PolymarketVault/OpenAlice/Strategy Review.md</i>): 235/237 strategies negative,
+  only buyhold positive (beta). Kill list: breakout*, momentum shorts, vol_regime*, regime_conf*, order_flow.
+  Fix-first: all pairs_* legs share one broken cost model.
+</div>
+
+<div class="grid">
+  <div class="panel"><div class="l">BTC</div><div class="v" id="btc">—</div></div>
+  <div class="panel"><div class="l">ETH</div><div class="v" id="eth">—</div></div>
+  <div class="panel"><div class="l">BTC funding</div><div class="v" id="fbtc">—</div></div>
+  <div class="panel"><div class="l">ETH funding</div><div class="v" id="feth">—</div></div>
+  <div class="panel"><div class="l">basis</div><div class="v" id="basis">—</div></div>
+  <div class="panel"><div class="l">pairs z-score</div><div class="v" id="z">—</div></div>
+  <div class="panel"><div class="l">cycles run</div><div class="v" id="cycles">—</div></div>
+</div>
+
+<div class="panel">
+  <div class="l" style="padding-top:8px">STRATEGY TOURNAMENT · $10k each · <span id="leader" style="color:var(--grn)"></span></div>
+  <table style="margin-top:6px">
+    <thead><tr><th>#</th><th>strategy</th><th>family</th><th>now</th><th style="text-align:right">return</th><th style="text-align:right">wins</th></tr></thead>
+    <tbody id="strats"></tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <div class="l" style="padding-top:8px">carry notes</div>
+  <ul>
+    <li>CARRY = long spot + short perp (delta-neutral): collects funding, no price risk, 4 taker fees per flip</li>
+    <li>pairs z measures BTC-ETH ratio stretch; |z| &gt; 2 is where mean-reversion becomes interesting</li>
+    <li>funding rates live from Binance futures API · accrual prorated by elapsed time</li>
+    <li>HONEST: directional 🎲 legs are coin-flips with fees; only sustained 🧠 edges matter</li>
+  </ul>
+</div>
+
+<div class="foot">
+  <span>HONEST: paper only · frozen feed rendered as-is</span>
+  <a href="/pipeline.html">PIPELINE</a> · <a href="/legs.html">LEGS</a> · <a href="/chart.html">CHART</a>
+</div>
+<script>
+async function tick(){
+  let d; try{ d=await(await fetch('/tournament.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
+  document.getElementById('ts').textContent=(d.ts||'').slice(11)+(typeof d.ts==='string'?'':' (epoch)');
+  const age=Date.now()/1000-(typeof d.ts==='number'?d.ts:Date.parse(d.ts)/1000);
+  document.getElementById('offline').style.display=age>900?'block':'none';
+  const n=v=>v==null?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('btc').textContent='$'+n(d.btc);
+  document.getElementById('eth').textContent='$'+n(d.eth);
+  document.getElementById('fbtc').textContent=d.funding_btc!=null?(d.funding_btc*100).toFixed(4)+'%':'—';
+  document.getElementById('feth').textContent=d.funding_eth!=null?(d.funding_eth*100).toFixed(4)+'%':'—';
+  document.getElementById('basis').textContent=d.basis??'—';
+  document.getElementById('z').textContent=d.pairs_z??'—';
+  document.getElementById('cycles').textContent=n(d.cycles);
+  const ss=d.strategies||[];
+  document.getElementById('leader').textContent=ss.length?`leader: ${ss[0].name} ${ss[0].return_pct>=0?'+':''}${ss[0].return_pct}%`:'';
+  const tb=document.getElementById('strats'); tb.innerHTML='';
+  const cls=v=>v>0?'pos':(v<0?'neg':'dim');
+  tb.innerHTML=ss.map((s,i)=>`<tr>
+    <td class="dim">${i+1}</td>
+    <td>${(s.name||'?')}${i===0&&s.return_pct>0?' <span style="color:var(--grn)">👑</span>':''}</td>
+    <td class="dim">${s.type||''}</td>
+    <td class="${s.pos==='LONG'?'pos':(String(s.pos).startsWith('CARRY')?'':'dim')}">${s.pos||'flat'}</td>
+    <td style="text-align:right" class="${cls(s.return_pct)}">${s.return_pct!=null?(s.return_pct>0?'+':'')+s.return_pct.toFixed(2)+'%':'—'}</td>
+    <td class="dim" style="text-align:right">${s.n?`${s.wins}/${s.n}`:'—'}</td>
+  </tr>`).join('')||'<tr><td colspan=6 class=dim>waiting for oa_tournament.py feed…</td></tr>';
+}
+tick(); setInterval(tick,15000);
+</script>
+</body>
+</html>
