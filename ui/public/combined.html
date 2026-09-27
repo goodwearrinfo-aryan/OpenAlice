@@ -40,13 +40,16 @@
 </table>
 <div class="refresh" id="refresh"></div>
 <script>
+const PUB_TOKEN = new URLSearchParams(location.search).get('token') || localStorage.getItem('pub_token') || '';
+const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(PUB_TOKEN) : '');
+
 const NAMES = { carry_btc: 'Carry BTC (persistence)', carry_eth: 'Carry ETH (persistence)', smart_trend_btc: 'Smart Trend BTC', trend_btc_1h: 'Trend BTC 1h' };
 const fmt = v => v == null ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const cls = v => v == null ? '' : (v >= 0 ? 'pos' : 'neg');
 
 async function load() {
   try {
-    const r = await fetch('combined_portfolio.json?ts=' + Date.now());
+    const r = await fetch(withToken('combined_portfolio.json?ts=' + Date.now());
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || 'feed not ok');
     const c = d.combined;

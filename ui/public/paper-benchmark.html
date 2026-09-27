@@ -36,8 +36,11 @@
 <div class="footer"><span>Paper-only controls · no live order path</span><span>Reports: verification-report.json · research-pipeline.json · legs-research.json · tournament-validation.json · regime-trend-shadow.json · regime-trend-outcomes.json · forward-validation.json · eth-paper-execution.json</span></div>
 </main>
 <script>
+const PUB_TOKEN = new URLSearchParams(location.search).get('token') || localStorage.getItem('pub_token') || '';
+const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(PUB_TOKEN) : '');
+
 const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const get=async(name,options={})=>{const r=await fetch(name,{cache:'no-store',...options});if(!r.ok)throw new Error(name+' '+r.status);return r.json()};
+const get=async(name,options={})=>{const r=await fetch(withToken(name),{cache:'no-store',...options});if(!r.ok)throw new Error(name+' '+r.status);return r.json()};
 const age=s=>s==null?'—':s<60?s+'s':s<3600?Math.floor(s/60)+'m':Math.floor(s/3600)+'h';
 const cls=(status)=>status==='active'||status==='ok'||status==='paper'||status==='complete'?'ok':status==='stale'||status==='warning'?'warn':'bad';
 const pill=(label,status)=>`<span class="pill ${cls(status)}">${esc(label)} · ${esc(status)}</span>`;

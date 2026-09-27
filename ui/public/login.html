@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — OpenAlice</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --red: #f85149;
+    --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 32px; width: 100%; max-width: 380px;
+  }
+  h1 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 22px; }
+  label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase;
+          letter-spacing: 0.05em; margin-bottom: 6px; }
+  input[type="password"] {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; font-family: inherit; font-size: 13px; outline: none;
+  }
+  input[type="password"]:focus { border-color: var(--accent); }
+  button {
+    width: 100%; margin-top: 16px; background: var(--accent); color: #0d1117;
+    border: none; border-radius: 6px; padding: 11px 12px;
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .err { color: var(--red); font-size: 12px; margin-top: 12px; min-height: 16px; }
+  .meta { color: var(--muted); font-size: 11px; margin-top: 18px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>OpenAlice</h1>
+  <div class="sub">enter the shared secret to reach the dashboards</div>
+  <form id="form">
+    <label for="pw">password</label>
+    <input type="password" id="pw" autocomplete="current-password" autofocus>
+    <button type="submit" id="go">Sign in</button>
+    <div class="err" id="err"></div>
+  </form>
+  <div class="meta">
+    The secret is checked against the server once, then kept in this browser's
+    local storage — pages open without a token in the URL afterwards.
+  </div>
+</div>
+<script>
+const form = document.getElementById('form');
+const pw = document.getElementById('pw');
+const go = document.getElementById('go');
+const err = document.getElementById('err');
+
+// already signed in on this device? go straight in
+if (localStorage.getItem('pub_token')) {
+  const next = new URLSearchParams(location.search).get('next') || 'dashboard.html';
+  location.replace(next);
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const token = pw.value.trim();
+  if (!token) { err.textContent = 'enter the password'; return; }
+  go.disabled = true;
+  err.textContent = '';
+  try {
+    // verify against a gated endpoint before storing anything
+    const probe = await fetch('/health-authorized?token=' + encodeURIComponent(token), { cache: 'no-store' });
+    if (probe.status === 401 || probe.status === 403) {
+      err.textContent = 'wrong password';
+      return;
+    }
+    if (!probe.ok) {
+      err.textContent = 'server error (' + probe.status + ') — try again';
+      return;
+    }
+    localStorage.setItem('pub_token', token);
+    const next = new URLSearchParams(location.search).get('next') || 'dashboard.html';
+    location.replace(next);
+  } catch (error) {
+    err.textContent = 'network error: ' + error.message;
+  } finally {
+    go.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
