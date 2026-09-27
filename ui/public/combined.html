@@ -8,7 +8,7 @@
   :root {
     --bg: #0d1117; --panel: #161b22; --border: #30363d;
     --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --red: #f85149;
-    --accent: #58a6ff;
+    --amber: #d29922; --accent: #58a6ff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: ui-monospace, 'SF Mono', Menlo, monospace; padding: 24px; }
@@ -26,13 +26,22 @@
   th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
   tr:last-child td { border-bottom: none; }
   .bar { height: 6px; background: var(--accent); border-radius: 3px; min-width: 2px; }
+  .bar.excluded { background: var(--muted); }
   .refresh { color: var(--muted); font-size: 11px; margin-top: 14px; }
   .err { color: var(--red); font-size: 12px; }
+  .banner { background: var(--panel); border: 1px solid var(--amber); border-left-width: 3px;
+            border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: var(--amber); }
+  .banner.bad { border-color: var(--red); color: var(--red); }
+  .banner ul { margin: 6px 0 0 18px; }
+  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px;
+         border: 1px solid var(--border); color: var(--muted); margin-left: 6px; }
+  .caveat { color: var(--muted); font-size: 10px; margin-top: 6px; line-height: 1.45; }
 </style>
 </head>
 <body>
 <h1>Combined Portfolio</h1>
-<div class="sub">inverse-vol weighted · uncorrelated components · Sharpe 6.21 (audit) vs 5.55 best solo</div>
+<div class="sub" id="subtitle">loading…</div>
+<div class="banner" id="banner" hidden></div>
 <div class="grid" id="cards"></div>
 <table id="components">
   <thead><tr><th>Component</th><th>Weight</th><th>Equity</th><th>Net</th><th>Status</th></tr></thead>
@@ -40,42 +49,103 @@
 </table>
 <div class="refresh" id="refresh"></div>
 <script>
-const PUB_TOKEN = new URLSearchParams(location.search).get('token') || localStorage.getItem('pub_token') || '';
-const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(PUB_TOKEN) : '');
-
-const NAMES = { carry_btc: 'Carry BTC (persistence)', carry_eth: 'Carry ETH (persistence)', smart_trend_btc: 'Smart Trend BTC', trend_btc_1h: 'Trend BTC 1h' };
+// Every number on this page comes from combined_portfolio.json. Nothing here is
+// hardcoded: a previous revision printed a static "Sharpe 6.21" that the audit had
+// already withdrawn, and a drifted portfolio still read as a healthy one.
+const NAMES = {
+  carry_btc: 'Carry BTC (never-flip)',
+  carry_eth: 'Carry ETH (never-flip)',
+  smart_trend_btc: 'Smart Trend BTC',
+  trend_btc_1h: 'Trend BTC 1h'
+};
 const fmt = v => v == null ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const pct = v => v == null ? '—' : Number(v).toFixed(3) + '%';
 const cls = v => v == null ? '' : (v >= 0 ? 'pos' : 'neg');
 
 async function load() {
   try {
-    const r = await fetch(withToken('combined_portfolio.json?ts=' + Date.now());
+    const r = await fetch('combined_portfolio.json?ts=' + Date.now());
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || 'feed not ok');
     const c = d.combined;
+    const ref = d.audit_reference || {};
+    const compWarn = d.warnings || [];
+    const feedWarn = d.feed_warnings || [];
+
+    document.getElementById('subtitle').textContent =
+      'live paper books · audit weights: ' + (ref.basis || 'research-eligible components only');
+
+    const banner = document.getElementById('banner');
+    const parts = [];
+    if (compWarn.length) {
+      parts.push('<div><strong>' + compWarn.length +
+        ' component(s) out of the blend</strong><ul>' +
+        compWarn.map(w => '<li>' + w + '</li>').join('') + '</ul>' +
+        '<div class="caveat">A component is dropped when its paper account is insolvent or ' +
+        'cannot be valued. The combined figure blends only what remains, so it is not the ' +
+        'full-weight portfolio.</div></div>');
+    }
+    if (feedWarn.length) {
+      parts.push('<div><strong>Feed degraded</strong><ul>' +
+        feedWarn.map(w => '<li>' + w + '</li>').join('') + '</ul></div>');
+    }
+    if (ref.drift_harvest_warning) {
+      parts.push('<div><strong>Drift harvest, not a trading edge</strong>' +
+        '<div class="caveat">The remaining weight is a zero-fee funding accrual. Measured ' +
+        'volatility on that series reflects what the model omits (intraday basis, margin, ' +
+        'squeeze risk), not risk that was measured.</div></div>');
+    }
+    if (parts.length) {
+      banner.hidden = false;
+      banner.className = feedWarn.length ? 'banner bad' : 'banner';
+      banner.innerHTML = parts.join('') +
+        '<div class="caveat">Effective weight ' + fmt((d.effective_weight || 0) * 100) +
+        '% of 100%.</div>';
+    } else {
+      banner.hidden = true;
+    }
+
+    // Risk-adjusted figures are shown only if the audit published them. They are
+    // null for this portfolio by design, and the reason is shown instead of a dash.
+    const sharpeCell = ref.sharpe == null
+      ? '<div class="value">not published</div>' +
+        '<div class="caveat">' + (ref.sharpe_suppressed_reason ||
+           'The audit withdraws risk-adjusted figures for this portfolio.') + '</div>'
+      : '<div class="value">' + fmt(ref.sharpe) + '</div>' +
+        '<div class="meta">Sharpe (backtest) · sortino ' + fmt(ref.sortino) +
+        ' · best solo ' + fmt(ref.best_solo_sharpe) + '</div>';
+
     document.getElementById('cards').innerHTML = `
       <div class="card"><div class="label">Combined Equity</div>
         <div class="value ${cls(c.net)}">${fmt(c.equity)}</div>
-        <div class="meta">net ${cls(c.net)} ${fmt(c.net)} · ${c.return_pct}% since start</div></div>
+        <div class="meta">net ${cls(c.net)} ${fmt(c.net)} · ${pct(c.return_pct)} since start · LIVE PAPER</div></div>
       <div class="card"><div class="label">BTC Price</div>
         <div class="value">${fmt(d.price)}</div>
         <div class="meta">proxy for trend legs</div></div>
-      <div class="card"><div class="label">Audit Reference</div>
-        <div class="value">Sharpe 6.21</div>
-        <div class="meta">vs 5.55 best solo · maxDD −0.25%</div></div>`;
+      <div class="card"><div class="label">Audit (backtest)</div>
+        <div class="value">${pct(ref.return_pct)}</div>
+        <div class="meta">net-return of the audit weights · maxDD ${pct(ref.max_dd_pct)}</div>
+        <div class="caveat">Backtest, not live performance. Covers research-eligible
+        components only; excluded: ${(ref.excluded_components || []).join(', ') || 'none'}.</div></div>
+      <div class="card"><div class="label">Risk-Adjusted</div>
+        ${sharpeCell}</div>`;
+
     const rows = Object.entries(d.components).map(([name, comp]) => {
       const w = comp.weight || 0;
       const barW = Math.max(2, Math.round(w * 400));
-      return `<tr>
-        <td>${NAMES[name] || name}<div class="bar" style="width:${barW}px"></div></td>
-        <td>${(w * 100).toFixed(1)}%</td>
+      const tag = comp.included ? '' : '<span class="tag">' + (comp.exclusion || 'excluded') + '</span>';
+      return `<tr${comp.included ? '' : ' style="opacity:0.65"'}>
+        <td>${NAMES[name] || name}${tag}<div class="bar${comp.included ? '' : ' excluded'}" style="width:${barW}px"></div></td>
+        <td>${(w * 100).toFixed(2)}%</td>
         <td class="${cls(comp.net)}">${fmt(comp.equity)}</td>
         <td class="${cls(comp.net)}">${fmt(comp.net)}</td>
-        <td class="meta">${comp.status || ''}${comp.side != null ? ' · side ' + (comp.side > 0 ? 'LONG' : (comp.side < 0 ? 'SHORT' : 'flat')) : ''}${comp.flips != null ? ' · ' + comp.flips + ' flips' : ''}${comp.trips != null ? ' · ' + comp.trips + ' trips' : ''}</td>
+        <td class="meta">${comp.status || ''}${comp.side != null ? ' · side ' + (comp.side > 0 ? 'LONG' : (comp.side < 0 ? 'SHORT' : 'flat')) : ''}${comp.flips != null ? ' · ' + comp.flips + ' flips' : ''}${comp.trips != null ? ' · ' + comp.trips + ' trips · ' + comp.wins + ' wins' : ''}</td>
       </tr>`;
     }).join('');
     document.querySelector('#components tbody').innerHTML = rows;
-    document.getElementById('refresh').textContent = 'updated ' + d.ts + ' · refreshes every 30s';
+    document.getElementById('refresh').textContent =
+      'updated ' + d.ts + ' · effective weight ' + fmt((d.effective_weight || 0) * 100) + '%' +
+      (ref.dataset_sha256 ? ' · dataset ' + String(ref.dataset_sha256).slice(0, 12) : '');
   } catch (e) {
     document.getElementById('refresh').innerHTML = '<span class="err">feed error: ' + e.message + '</span>';
   }
