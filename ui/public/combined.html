@@ -1,157 +1,229 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Combined Portfolio — OpenAlice</title>
-<style>
-  :root {
-    --bg: #0d1117; --panel: #161b22; --border: #30363d;
-    --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --red: #f85149;
-    --amber: #d29922; --accent: #58a6ff;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: ui-monospace, 'SF Mono', Menlo, monospace; padding: 24px; }
-  h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-  .sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-  .card .value { font-size: 20px; font-weight: 700; }
-  .card .meta { color: var(--muted); font-size: 11px; margin-top: 6px; }
-  .pos { color: var(--green); }
-  .neg { color: var(--red); }
-  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 8px 12px; text-align: left; font-size: 12px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
-  tr:last-child td { border-bottom: none; }
-  .bar { height: 6px; background: var(--accent); border-radius: 3px; min-width: 2px; }
-  .bar.excluded { background: var(--muted); }
-  .refresh { color: var(--muted); font-size: 11px; margin-top: 14px; }
-  .err { color: var(--red); font-size: 12px; }
-  .banner { background: var(--panel); border: 1px solid var(--amber); border-left-width: 3px;
-            border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: var(--amber); }
-  .banner.bad { border-color: var(--red); color: var(--red); }
-  .banner ul { margin: 6px 0 0 18px; }
-  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px;
-         border: 1px solid var(--border); color: var(--muted); margin-left: 6px; }
-  .caveat { color: var(--muted); font-size: 10px; margin-top: 6px; line-height: 1.45; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b10">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/terminal.css">
+  <title>OpenAlice · Combined Portfolio</title>
 </head>
-<body>
-<h1>Combined Portfolio</h1>
-<div class="sub" id="subtitle">loading…</div>
-<div class="banner" id="banner" hidden></div>
-<div class="grid" id="cards"></div>
-<table id="components">
-  <thead><tr><th>Component</th><th>Weight</th><th>Equity</th><th>Net</th><th>Status</th></tr></thead>
-  <tbody></tbody>
-</table>
-<div class="refresh" id="refresh"></div>
-<script>
-// Every number on this page comes from combined_portfolio.json. Nothing here is
-// hardcoded: a previous revision printed a static "Sharpe 6.21" that the audit had
-// already withdrawn, and a drifted portfolio still read as a healthy one.
-const NAMES = {
-  carry_btc: 'Carry BTC (never-flip)',
-  carry_eth: 'Carry ETH (never-flip)',
-  smart_trend_btc: 'Smart Trend BTC',
-  trend_btc_1h: 'Trend BTC 1h'
-};
-const fmt = v => v == null ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
-const pct = v => v == null ? '—' : Number(v).toFixed(3) + '%';
-const cls = v => v == null ? '' : (v >= 0 ? 'pos' : 'neg');
+<body class="oa-shell" data-page="combined">
+  <header class="oa-topbar"><a class="oa-brand" href="/"><span class="oa-brand-mark">OA</span><span class="oa-brand-copy"><span class="oa-brand-title">OpenAlice</span><span class="oa-brand-subtitle">Operations console</span></span></a><nav class="oa-nav" data-page-nav aria-label="Primary navigation"><a href="/">Pipeline</a><a href="/dashboard.html">Overview</a><a href="/trading/">Trading</a><a href="/chart.html">Chart</a><a href="/legs.html">Legs</a><a href="/screener.html">Screener</a><a href="/tournament.html">Tournament</a><a href="/combined.html">Combined</a></nav><span class="oa-topbar-spacer"></span><div class="oa-topbar-meta"><span class="oa-clock" data-clock>--:--:--</span><span id="combined-status" class="oa-status is-warning">Connecting</span><button class="oa-theme-toggle" type="button" data-theme-toggle><span class="oa-theme-mark">D</span><span class="oa-theme-label" data-theme-label>Dark</span></button></div></header>
+  <main class="oa-content">
+    <div class="oa-page-header">
+      <div>
+        <p class="oa-eyebrow">OpenAlice / paper execution</p>
+        <h1 class="oa-page-title">Combined portfolio</h1>
+        <p class="oa-page-subtitle">Live paper books blended at the audit's inverse-vol weights. Every figure on this page is read from the feed; nothing is hardcoded.</p>
+      </div>
+      <div class="oa-page-actions">
+        <span id="combined-updated" class="oa-ticker">Updated —</span>
+        <button id="combined-refresh" class="oa-button" type="button">Refresh</button>
+      </div>
+    </div>
 
-async function load() {
-  try {
-    const r = await fetch('combined_portfolio.json?ts=' + Date.now());
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || 'feed not ok');
-    const c = d.combined;
-    const ref = d.audit_reference || {};
-    const compWarn = d.warnings || [];
-    const feedWarn = d.feed_warnings || [];
+    <div id="combined-alert" class="oa-alert" hidden><div><strong>Combined feed unavailable</strong><span>Waiting for combined_portfolio.json.</span></div></div>
+    <div id="combined-partial" class="oa-alert" hidden><div><strong>Partial portfolio</strong><span id="combined-partial-detail"></span></div></div>
+    <div id="combined-drift" class="oa-callout" hidden><div><strong>Drift harvest, not a trading edge</strong><span>The remaining weight is a zero-fee funding accrual. Measured volatility on that series reflects what the model omits — intraday basis, margin and squeeze risk — not risk that was measured.</span></div></div>
 
-    document.getElementById('subtitle').textContent =
-      'live paper books · audit weights: ' + (ref.basis || 'research-eligible components only');
+    <section class="oa-kpi-grid">
+      <article class="oa-kpi">
+        <span class="oa-kpi-label">Combined equity</span>
+        <strong id="kpi-equity" class="oa-kpi-value">—</strong>
+        <span id="kpi-equity-detail" class="oa-kpi-detail">Paper only</span>
+      </article>
+      <article class="oa-kpi">
+        <span class="oa-kpi-label">Net since start</span>
+        <strong id="kpi-net" class="oa-kpi-value">—</strong>
+        <span id="kpi-net-detail" class="oa-kpi-detail">Against the audit's initial equity</span>
+      </article>
+      <article class="oa-kpi">
+        <span class="oa-kpi-label">Effective weight</span>
+        <strong id="kpi-weight" class="oa-kpi-value">—</strong>
+        <span class="oa-kpi-detail">Share of the audit weighting actually in the blend</span>
+      </article>
+      <article class="oa-kpi">
+        <span class="oa-kpi-label">Audit return</span>
+        <strong id="kpi-audit-return" class="oa-kpi-value">—</strong>
+        <span class="oa-kpi-detail">Backtest, research-eligible components only</span>
+      </article>
+      <article class="oa-kpi">
+        <span class="oa-kpi-label">Risk-adjusted</span>
+        <strong id="kpi-sharpe" class="oa-kpi-value">Not published</strong>
+        <span class="oa-kpi-detail">Withdrawn by the audit for this portfolio</span>
+      </article>
+      <article class="oa-kpi">
+        <span class="oa-kpi-label">BTC reference</span>
+        <strong id="kpi-btc" class="oa-kpi-value">—</strong>
+        <span class="oa-kpi-detail">Mark price for the trend legs</span>
+      </article>
+    </section>
 
-    const banner = document.getElementById('banner');
-    const parts = [];
-    if (compWarn.length) {
-      parts.push('<div><strong>' + compWarn.length +
-        ' component(s) out of the blend</strong><ul>' +
-        compWarn.map(w => '<li>' + w + '</li>').join('') + '</ul>' +
-        '<div class="caveat">A component is dropped when its paper account is insolvent or ' +
-        'cannot be valued. The combined figure blends only what remains, so it is not the ' +
-        'full-weight portfolio.</div></div>');
-    }
-    if (feedWarn.length) {
-      parts.push('<div><strong>Feed degraded</strong><ul>' +
-        feedWarn.map(w => '<li>' + w + '</li>').join('') + '</ul></div>');
-    }
-    if (ref.drift_harvest_warning) {
-      parts.push('<div><strong>Drift harvest, not a trading edge</strong>' +
-        '<div class="caveat">The remaining weight is a zero-fee funding accrual. Measured ' +
-        'volatility on that series reflects what the model omits (intraday basis, margin, ' +
-        'squeeze risk), not risk that was measured.</div></div>');
-    }
-    if (parts.length) {
-      banner.hidden = false;
-      banner.className = feedWarn.length ? 'banner bad' : 'banner';
-      banner.innerHTML = parts.join('') +
-        '<div class="caveat">Effective weight ' + fmt((d.effective_weight || 0) * 100) +
-        '% of 100%.</div>';
-    } else {
-      banner.hidden = true;
-    }
+    <section class="oa-panel oa-section-gap">
+      <div class="oa-panel-header">
+        <div class="oa-panel-heading">
+          <p class="oa-panel-kicker">Live paper state</p>
+          <h2 class="oa-panel-title">Components</h2>
+          <p class="oa-panel-description">Each leg's own book, its audit weight, and whether it is included in the combined figure. Rows marked excluded are shown for transparency and are not blended.</p>
+        </div>
+        <span id="combined-count" class="oa-badge">0 rows</span>
+      </div>
+      <div class="oa-panel-body is-flush">
+        <div class="oa-table-wrap">
+          <table class="oa-table">
+            <thead><tr><th>Component</th><th class="is-number">Weight</th><th class="is-number">Equity</th><th class="is-number">Net</th><th class="is-number">Trips</th><th class="is-number">Wins</th><th>Status</th></tr></thead>
+            <tbody id="combined-body"><tr><td class="oa-empty" colspan="7">Loading combined portfolio…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-    // Risk-adjusted figures are shown only if the audit published them. They are
-    // null for this portfolio by design, and the reason is shown instead of a dash.
-    const sharpeCell = ref.sharpe == null
-      ? '<div class="value">not published</div>' +
-        '<div class="caveat">' + (ref.sharpe_suppressed_reason ||
-           'The audit withdraws risk-adjusted figures for this portfolio.') + '</div>'
-      : '<div class="value">' + fmt(ref.sharpe) + '</div>' +
-        '<div class="meta">Sharpe (backtest) · sortino ' + fmt(ref.sortino) +
-        ' · best solo ' + fmt(ref.best_solo_sharpe) + '</div>';
+    <section class="oa-panel oa-section-gap">
+      <div class="oa-panel-header">
+        <div class="oa-panel-heading">
+          <p class="oa-panel-kicker">Provenance</p>
+          <h2 class="oa-panel-title">What backs these weights</h2>
+          <p class="oa-panel-description">The weights and every backtest figure come from the audit report named below, not from this page.</p>
+        </div>
+      </div>
+      <div class="oa-panel-body">
+        <div class="oa-summary-grid">
+          <div class="oa-summary-item"><span class="oa-muted">Basis</span><strong id="prov-basis">—</strong></div>
+          <div class="oa-summary-item"><span class="oa-muted">Max drawdown</span><strong id="prov-dd">—</strong></div>
+          <div class="oa-summary-item"><span class="oa-muted">Best solo Sharpe</span><strong id="prov-solo">—</strong></div>
+          <div class="oa-summary-item"><span class="oa-muted">Excluded</span><strong id="prov-excluded">—</strong></div>
+          <div class="oa-summary-item"><span class="oa-muted">Dataset</span><strong id="prov-dataset" class="oa-code">—</strong></div>
+          <div class="oa-summary-item"><span class="oa-muted">Source</span><strong id="prov-source" class="oa-code">—</strong></div>
+        </div>
+        <p id="prov-note" class="oa-muted oa-panel-description">—</p>
+      </div>
+    </section>
+  </main>
+  <footer class="oa-content oa-footer"><span>OpenAlice · combined portfolio (paper)</span><span class="oa-footer-links"><a href="/tournament.html">Tournament</a><a href="/dashboard.html">Overview</a><span>© <span data-year></span></span></span></footer>
+  <script src="/terminal.js"></script>
+  <script>
+// The pubserver auth-gates every endpoint except /health. A bare fetch() of a
+// feed 401s, so the shared secret is carried on every request here.
+const PUB_TOKEN = new URLSearchParams(location.search).get('token') || localStorage.getItem('pub_token') || '';
+const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(PUB_TOKEN) : '');
 
-    document.getElementById('cards').innerHTML = `
-      <div class="card"><div class="label">Combined Equity</div>
-        <div class="value ${cls(c.net)}">${fmt(c.equity)}</div>
-        <div class="meta">net ${cls(c.net)} ${fmt(c.net)} · ${pct(c.return_pct)} since start · LIVE PAPER</div></div>
-      <div class="card"><div class="label">BTC Price</div>
-        <div class="value">${fmt(d.price)}</div>
-        <div class="meta">proxy for trend legs</div></div>
-      <div class="card"><div class="label">Audit (backtest)</div>
-        <div class="value">${pct(ref.return_pct)}</div>
-        <div class="meta">net-return of the audit weights · maxDD ${pct(ref.max_dd_pct)}</div>
-        <div class="caveat">Backtest, not live performance. Covers research-eligible
-        components only; excluded: ${(ref.excluded_components || []).join(', ') || 'none'}.</div></div>
-      <div class="card"><div class="label">Risk-Adjusted</div>
-        ${sharpeCell}</div>`;
+    (() => {
+      const ui = window.OpenAliceUI;
+      const cell = (value, className = '') => ui.createCell(value, className);
+      const tone = value => ui.number(value) == null ? 'oa-muted' : (value >= 0 ? 'oa-positive' : 'oa-negative');
 
-    const rows = Object.entries(d.components).map(([name, comp]) => {
-      const w = comp.weight || 0;
-      const barW = Math.max(2, Math.round(w * 400));
-      const tag = comp.included ? '' : '<span class="tag">' + (comp.exclusion || 'excluded') + '</span>';
-      return `<tr${comp.included ? '' : ' style="opacity:0.65"'}>
-        <td>${NAMES[name] || name}${tag}<div class="bar${comp.included ? '' : ' excluded'}" style="width:${barW}px"></div></td>
-        <td>${(w * 100).toFixed(2)}%</td>
-        <td class="${cls(comp.net)}">${fmt(comp.equity)}</td>
-        <td class="${cls(comp.net)}">${fmt(comp.net)}</td>
-        <td class="meta">${comp.status || ''}${comp.side != null ? ' · side ' + (comp.side > 0 ? 'LONG' : (comp.side < 0 ? 'SHORT' : 'flat')) : ''}${comp.flips != null ? ' · ' + comp.flips + ' flips' : ''}${comp.trips != null ? ' · ' + comp.trips + ' trips · ' + comp.wins + ' wins' : ''}</td>
-      </tr>`;
-    }).join('');
-    document.querySelector('#components tbody').innerHTML = rows;
-    document.getElementById('refresh').textContent =
-      'updated ' + d.ts + ' · effective weight ' + fmt((d.effective_weight || 0) * 100) + '%' +
-      (ref.dataset_sha256 ? ' · dataset ' + String(ref.dataset_sha256).slice(0, 12) : '');
-  } catch (e) {
-    document.getElementById('refresh').innerHTML = '<span class="err">feed error: ' + e.message + '</span>';
-  }
-}
-load();
-setInterval(load, 30000);
-</script>
+      const NAMES = {
+        carry_btc: 'Carry BTC',
+        carry_eth: 'Carry ETH',
+        smart_trend_btc: 'Smart trend BTC',
+        trend_btc_1h: 'Trend BTC 1h'
+      };
+
+      function setAlert(id, visible, detailId, detail) {
+        const box = document.getElementById(id);
+        box.hidden = !visible;
+        if (visible && detailId && detail != null) {
+          document.getElementById(detailId).textContent = detail;
+        }
+      }
+
+      async function refresh() {
+        const button = document.getElementById('combined-refresh');
+        button.disabled = true;
+        try {
+          const response = await fetch(withToken('/combined_portfolio.json?_=' + Date.now()), { cache: 'no-store' });
+          if (!response.ok) throw new Error(String(response.status));
+          const data = await response.json();
+          if (!data.ok) throw new Error(data.error || 'feed reported not ok');
+
+          const combined = data.combined || {};
+          const ref = data.audit_reference || {};
+          const components = data.components || {};
+          const entries = Object.entries(components);
+          const included = entries.filter(([, c]) => c.included);
+
+          ui.setText('#combined-updated', 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+          ui.setConnection('#combined-status', 'live', 'Live');
+          document.getElementById('combined-alert').hidden = true;
+
+          // Headline figures.
+          const equityTone = tone(combined.net);
+          ui.setText('#kpi-equity', ui.formatMoney(combined.equity));
+          document.getElementById('kpi-equity').className = 'oa-kpi-value ' + equityTone;
+          ui.setText('#kpi-equity-detail', `${included.length} of ${entries.length} components in the blend`);
+          ui.setText('#kpi-net', ui.formatMoney(combined.net));
+          document.getElementById('kpi-net').className = 'oa-kpi-value ' + equityTone;
+          ui.setText('#kpi-net-detail', ui.formatPercent(combined.return_pct) + ' since start · paper');
+          ui.setText('#kpi-weight', ui.formatPercent((ui.number(data.effective_weight) || 0) * 100));
+          document.getElementById('kpi-weight').className = 'oa-kpi-value ' + (Math.abs((ui.number(data.effective_weight) || 0) - 1) < 1e-6 ? 'oa-positive' : 'oa-warning');
+          ui.setText('#kpi-audit-return', ui.formatPercent(ref.return_pct));
+          document.getElementById('kpi-audit-return').className = 'oa-kpi-value ' + tone(ref.return_pct);
+          ui.setText('#kpi-btc', ui.formatPrice(data.price));
+
+          // Risk-adjusted figures are shown only if the audit published them. They
+          // are null for this portfolio by design; a bare dash would hide why.
+          const sharpe = document.getElementById('kpi-sharpe');
+          if (ref.sharpe == null) {
+            sharpe.textContent = 'Not published';
+            sharpe.className = 'oa-kpi-value oa-muted';
+          } else {
+            sharpe.textContent = ui.formatNumber(ref.sharpe);
+            sharpe.className = 'oa-kpi-value';
+          }
+
+          // A dead component and a broken feed are different problems.
+          const excludedNotes = (data.warnings || []).concat(data.feed_warnings || []);
+          setAlert('combined-partial', excludedNotes.length > 0, 'combined-partial-detail', excludedNotes.join(' '));
+          document.getElementById('combined-drift').hidden = !ref.drift_harvest_warning;
+
+          // Provenance.
+          ui.setText('#prov-basis', ref.basis || '—');
+          ui.setText('#prov-dd', ui.formatPercent(ref.max_dd_pct));
+          ui.setText('#prov-solo', ref.best_solo_sharpe == null ? '—' : ui.formatNumber(ref.best_solo_sharpe));
+          ui.setText('#prov-excluded', (ref.excluded_components || []).join(', ') || 'none');
+          ui.setText('#prov-dataset', String(ref.dataset_sha256 || '—').slice(0, 12));
+          ui.setText('#prov-source', String(ref.source || '—').split('/').slice(-1)[0]);
+          ui.setText('#prov-note', ref.sharpe_suppressed_reason || ref.note || '—');
+
+          ui.setText('#combined-count', ui.formatNumber(entries.length, 0) + ' rows');
+
+          const tbody = document.getElementById('combined-body');
+          if (!entries.length) return ui.renderEmpty(tbody, 7, 'No components reported');
+          tbody.replaceChildren();
+          entries.forEach(([name, comp]) => {
+            const row = document.createElement('tr');
+            if (!comp.included) row.style.opacity = '0.65';
+            const label = document.createElement('td');
+            label.textContent = NAMES[name] || name;
+            if (!comp.included) {
+              const tag = document.createElement('span');
+              tag.className = 'oa-badge';
+              tag.style.marginLeft = '8px';
+              tag.textContent = comp.exclusion || 'excluded';
+              label.appendChild(tag);
+            }
+            row.appendChild(label);
+            row.appendChild(cell(ui.formatPercent(Number(comp.weight || 0) * 100), 'is-number'));
+            row.appendChild(cell(ui.formatMoney(comp.equity), 'is-number ' + tone(comp.net)));
+            row.appendChild(cell(ui.formatMoney(comp.net), 'is-number ' + tone(comp.net)));
+            row.appendChild(cell(comp.trips == null ? '—' : ui.formatNumber(comp.trips, 0), 'is-number'));
+            row.appendChild(cell(comp.wins == null ? '—' : ui.formatNumber(comp.wins, 0), 'is-number'));
+            row.appendChild(cell(comp.status || '—', comp.included ? '' : 'oa-muted'));
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          ui.setConnection('#combined-status', 'error', 'Unavailable');
+          document.getElementById('combined-alert').hidden = false;
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      document.getElementById('combined-refresh').addEventListener('click', refresh);
+      refresh();
+      window.setInterval(() => { if (!document.hidden) refresh(); }, 10000);
+    })();
+  </script>
 </body>
 </html>

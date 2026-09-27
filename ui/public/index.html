@@ -11,7 +11,7 @@
 <body class="oa-shell" data-page="pipeline">
   <header class="oa-topbar">
     <a class="oa-brand" href="/"><span class="oa-brand-mark">OA</span><span class="oa-brand-copy"><span class="oa-brand-title">OpenAlice</span><span class="oa-brand-subtitle">Operations console</span></span></a>
-    <nav class="oa-nav" data-page-nav aria-label="Primary navigation"><a href="/">Pipeline</a><a href="/dashboard.html">Overview</a><a href="/trading/">Trading</a><a href="/chart.html">Chart</a><a href="/legs.html">Legs</a><a href="/screener.html">Screener</a><a href="/tournament.html">Tournament</a></nav>
+    <nav class="oa-nav" data-page-nav aria-label="Primary navigation"><a href="/">Pipeline</a><a href="/dashboard.html">Overview</a><a href="/trading/">Trading</a><a href="/chart.html">Chart</a><a href="/legs.html">Legs</a><a href="/screener.html">Screener</a><a href="/tournament.html">Tournament</a><a href="/combined.html">Combined</a></nav>
     <span class="oa-topbar-spacer"></span>
     <div class="oa-topbar-meta"><span class="oa-clock" data-clock>--:--:--</span><span id="pipeline-status" class="oa-status is-warning">Connecting</span><button class="oa-theme-toggle" type="button" data-theme-toggle><span class="oa-theme-mark">D</span><span class="oa-theme-label" data-theme-label>Dark</span></button></div>
   </header>
@@ -32,6 +32,11 @@
   <footer class="oa-content oa-footer"><span>OpenAlice · live pipeline</span><span class="oa-footer-links"><a href="/dashboard.html">Overview</a><a href="/tournament.html">Tournament</a><span>© <span data-year></span></span></span></footer>
   <script src="/terminal.js"></script>
   <script>
+// The pubserver auth-gates every endpoint except /health, so a bare fetch() of
+// pipeline.json 401s and the landing page renders empty. Carry the shared secret.
+const PUB_TOKEN = new URLSearchParams(location.search).get('token') || localStorage.getItem('pub_token') || '';
+const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(PUB_TOKEN) : '');
+
     (() => {
       const ui = window.OpenAliceUI;
       const cell = (value, className = '') => ui.createCell(value, className);
@@ -41,7 +46,7 @@
         const button = document.getElementById('pipeline-refresh');
         button.disabled = true;
         try {
-          const response = await fetch('/pipeline.json?_=' + Date.now(), { cache: 'no-store' });
+          const response = await fetch(withToken('/pipeline.json?_=' + Date.now()), { cache: 'no-store' });
           if (!response.ok) throw new Error(String(response.status));
           const data = await response.json();
           const bot = data.bot_legs || {};
