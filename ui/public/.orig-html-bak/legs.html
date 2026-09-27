@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="theme-color" content="#000000"/>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+<title>OPENALICE · CANDLE LEGS</title>
+<style>
+  :root{--bg:#000;--amber:#ffa028;--orange:#ff7a00;--white:#eaeaea;--grn:#46e34a;--red:#ff4d4d;--dim:#6b6b6b;--cyan:#37b6ff;--line:#181818}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--amber);font:13px/1.35 'SF Mono',Menlo,monospace}
+  .top{display:flex;align-items:center;gap:12px;border-bottom:2px solid var(--orange);padding:6px 12px}
+  .brand{color:#000;background:var(--orange);font-weight:700;letter-spacing:1px;padding:2px 9px}
+  table{width:100%;border-collapse:collapse}
+  th{color:var(--cyan);text-align:left;text-transform:uppercase;font-size:11px;font-weight:400;letter-spacing:.5px;padding:5px 12px;border-bottom:1px solid var(--orange)}
+  td{padding:5px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tr:hover td{background:#0e0b03}
+  .pos{color:var(--grn)}.neg{color:var(--red)}.dim{color:var(--dim)}
+  .banner{display:none;padding:7px 12px;color:#e3b341;background:#241b00;border-bottom:1px solid #664d00;font-size:12px}
+  .foot{border-top:1px solid var(--orange);color:#6b4a10;padding:7px 12px;display:flex;gap:18px;flex-wrap:wrap}
+  b{color:var(--white)} a{color:var(--cyan);text-decoration:none}
+.nav a{color:var(--dim);text-decoration:none}.nav a.on{color:var(--grn);font-weight:700}
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">OPENALICE</span><span>CANDLE LEGS · live 5:1 brackets · BTC 1h</span><span class="dim" style="margin-left:auto" id="ts">--:--:--</span></div>
+<div class="banner" id="stale"></div>
+<table id="t">
+<thead><tr><th>leg</th><th>now</th><th>entry</th><th>stop (1×ATR)</th><th>target (5×ATR)</th><th>target-hit</th><th>win%</th><th>vs BE 16.7%</th><th>backtest win</th></tr></thead>
+<tbody></tbody>
+</table>
+<div class="foot">
+  <span>BREAKEVEN <b>16.7%</b></span><span>HONEST: 5:1 ≠ edge — a leg only profits above breakeven target-hit rate</span>
+  <a href="/pipeline.html">PIPELINE</a> · <a href="/tournament.html">TOURNAMENT</a>
+</div>
+<script>
+async function tick(){
+  let d; try{ d=await(await fetch('/legs.json?_='+Date.now())).json(); }catch(e){ document.getElementById('ts').textContent='NO FEED'; return; }
+  document.getElementById('ts').textContent=(d.ts||'').slice(11);
+  const age=Date.now()/1000-(typeof d.ts==='number'?d.ts:Date.parse(d.ts)/1000);
+  const st=document.getElementById('stale');
+  if(age>900){ st.style.display='block'; st.textContent='FEED STALE ('+Math.round(age/60)+' min) — legs runner offline?'; }
+  else st.style.display='none';
+  const tb=document.querySelector('#t tbody'); tb.innerHTML='';
+  for(const l of (d.legs||[])){
+    const edge=l.breakeven?l.winpct-l.breakeven:0;
+    tb.innerHTML+=`<tr>
+      <td>${l.leg}</td>
+      <td class="${l.pos==='LONG'?'pos':'dim'}">${(l.pos||'flat').toUpperCase()}</td>
+      <td>${l.entry!=null?'$'+l.entry.toLocaleString():'—'}</td>
+      <td class="neg">${l.stop!=null?'$'+l.stop.toLocaleString():'—'}</td>
+      <td class="pos">${l.target!=null?'$'+l.target.toLocaleString():'—'}</td>
+      <td>${l.wins}/${l.wins+l.losses}</td>
+      <td>${l.winpct}%</td>
+      <td class="${edge>=0?'pos':'neg'}">${edge>=0?'+':''}${edge.toFixed(1)}</td>
+      <td class="dim">BT ${l.backtest}%</td>
+    </tr>`;
+  }
+}
+tick(); setInterval(tick,10000);
+</script>
+</body>
+</html>
