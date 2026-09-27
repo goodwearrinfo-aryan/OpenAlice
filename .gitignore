@@ -18,3 +18,10 @@ __pycache__/
 *.pyc
 *.tmp
 .DS_Store
+
+# Pre-restructure backups of the console pages, kept on disk as a restore point
+# but no longer tracked. They were working-tree cruft that outlived their reason:
+# the pages they copied now live in openalice-fleet, and their content is still in
+# this repository's history. Untracked rather than deleted so the local restore
+# point survives.
+ui/public/.orig-html-bak/
