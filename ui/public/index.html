@@ -17,7 +17,7 @@
   </header>
   <main class="oa-content">
     <div class="oa-page-header"><div><p class="oa-eyebrow">OpenAlice / fleet pipeline</p><h1 class="oa-page-title">Pipeline overview</h1><p class="oa-page-subtitle">The current state of the paper fleet, job runner, candle legs, and strategy race.</p></div><div class="oa-page-actions"><span id="pipeline-updated" class="oa-ticker">Updated —</span><button id="pipeline-refresh" class="oa-button" type="button">Refresh</button></div></div>
-    <div id="pipeline-alert" class="oa-alert" hidden><div><strong>Pipeline feed unavailable</strong><span>Waiting for the live pipeline JSON feed.</span></div></div>
+    <div id="pipeline-alert" class="oa-alert" hidden><div><strong id="pipeline-alert-title">Pipeline feed unavailable</strong><span id="pipeline-alert-body">Waiting for the live pipeline JSON feed.</span></div></div>
     <section class="oa-kpi-grid"><article class="oa-kpi"><span class="oa-kpi-label">Bot legs</span><strong id="bot-legs" class="oa-kpi-value">—</strong><span class="oa-kpi-detail">Persistent leg records</span></article><article class="oa-kpi"><span class="oa-kpi-label">Closed trades</span><strong id="trade-total" class="oa-kpi-value">—</strong><span class="oa-kpi-detail">Recorded outcomes</span></article><article class="oa-kpi"><span class="oa-kpi-label">Book P&amp;L</span><strong id="book-pnl" class="oa-kpi-value">—</strong><span class="oa-kpi-detail">Paper account</span></article><article class="oa-kpi"><span class="oa-kpi-label">Jobs live</span><strong id="job-health" class="oa-kpi-value">—</strong><span class="oa-kpi-detail">Supervisor state</span></article><article class="oa-kpi"><span class="oa-kpi-label">Agents</span><strong id="agent-count" class="oa-kpi-value">—</strong><span class="oa-kpi-detail">Hive roster</span></article></section>
     <section class="oa-panel oa-section-gap"><div class="oa-panel-header"><div class="oa-panel-heading"><p class="oa-panel-kicker">Market view</p><h2 class="oa-panel-title">BTC chart</h2><p class="oa-panel-description">Live candles served by the chart surface.</p></div><a class="oa-button is-quiet" href="/chart.html">Open chart</a></div><div class="oa-panel-body is-flush"><iframe src="/chart.html" title="BTC chart" style="width:100%;height:30rem;border:0;display:block"></iframe></div></section>
     <div class="oa-grid oa-grid-main oa-section-gap">
@@ -42,6 +42,54 @@ const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 't
       const cell = (value, className = '') => ui.createCell(value, className);
       const signClass = value => ui.number(value) > 0 ? 'oa-positive' : ui.number(value) < 0 ? 'oa-negative' : 'oa-muted';
       const setRows = (tbody, rows, columns, empty) => { if (!rows.length) return ui.renderEmpty(tbody, columns, empty); tbody.replaceChildren(); rows.forEach(values => { const row = document.createElement('tr'); values.forEach(value => row.append(cell(value?.text ?? value, value?.className || ''))); tbody.append(row); }); };
+
+      // A 200 only proves the file is readable. oa_pipeline.py republishes every
+      // 30s, so a frozen feed sits behind a healthy response indefinitely -- and
+      // this page polls every few seconds, so it would keep re-stamping "Live"
+      // over stale numbers with no warning. Status comes from the age of the
+      // feed, never from the fetch succeeding.
+      const FRESH_MS = 90 * 1000;   // 3 missed cycles
+      const STALE_MS = 300 * 1000;
+      const feedAgeMs = value => {
+        if (!value) return null;
+        // The writer emits naive LOCAL time ("2026-09-27 23:14:49"). A
+        // space-separated value is not portable to parse, so normalise to ISO: a
+        // date-time with no offset is local time by spec, which is what the
+        // writer means, and a future offset-aware value still parses correctly.
+        const parsed = Date.parse(String(value).trim().replace(' ', 'T'));
+        return Number.isFinite(parsed) ? Date.now() - parsed : null;
+      };
+      const setAlert = (title, body) => {
+        ui.setText('#pipeline-alert-title', title);
+        ui.setText('#pipeline-alert-body', body);
+        document.getElementById('pipeline-alert').hidden = false;
+      };
+      const describeAge = ms => ms < 60000 ? `${Math.max(1, Math.round(ms / 1000))}s` : `${Math.round(ms / 60000)}m`;
+      function applyFeedStatus(ts) {
+        const status = document.getElementById('pipeline-status');
+        const ms = feedAgeMs(ts);
+        ui.setText('#pipeline-updated', `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+        if (ms == null) {
+          // An unreadable timestamp must never read as fresh.
+          ui.setText('#pipeline-status', 'Unknown age');
+          status.className = 'oa-status is-warning';
+          setAlert('Pipeline feed age unknown', 'The feed carried no readable timestamp, so this page cannot claim to be live.');
+          return;
+        }
+        if (ms <= FRESH_MS) {
+          ui.setText('#pipeline-status', 'Live');
+          status.className = 'oa-status is-live';
+          document.getElementById('pipeline-alert').hidden = true;
+        } else if (ms <= STALE_MS) {
+          ui.setText('#pipeline-status', `Stale ${describeAge(ms)}`);
+          status.className = 'oa-status is-warning';
+          setAlert('Pipeline feed is stale', `No new cycle for ${describeAge(ms)}. The writer republishes every 30s, so it is not keeping up.`);
+        } else {
+          ui.setText('#pipeline-status', `Stalled ${describeAge(ms)}`);
+          status.className = 'oa-status is-error';
+          setAlert('Pipeline feed has stopped', `Last cycle ${describeAge(ms)} ago. Treat every figure on this page as historical, not live.`);
+        }
+      }
       async function refresh() {
         const button = document.getElementById('pipeline-refresh');
         button.disabled = true;
@@ -55,10 +103,7 @@ const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 't
           const algo = data.algo20 || {};
           const legs = bot.legs || [];
           const strategies = algo.algos || [];
-          ui.setText('#pipeline-updated', `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
-          ui.setText('#pipeline-status', 'Live');
-          document.getElementById('pipeline-status').className = 'oa-status is-live';
-          document.getElementById('pipeline-alert').hidden = true;
+          applyFeedStatus(data.ts);
           ui.setText('#bot-legs', ui.formatNumber(legs.length, 0));
           ui.setText('#trade-total', ui.formatNumber(bot.total_n, 0));
           ui.setText('#book-pnl', ui.formatMoney(bot.total_pnl));
@@ -78,12 +123,15 @@ const withToken = url => url + (PUB_TOKEN ? (url.includes('?') ? '&' : '?') + 't
         } catch (error) {
           ui.setText('#pipeline-status', 'Unavailable');
           document.getElementById('pipeline-status').className = 'oa-status is-error';
-          document.getElementById('pipeline-alert').hidden = false;
+          setAlert('Pipeline feed unavailable', 'The feed could not be read. Figures below are from the last successful load, not live.');
         } finally { button.disabled = false; }
       }
       document.getElementById('pipeline-refresh').addEventListener('click', refresh);
       refresh();
-      window.setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+      // oa_pipeline.py republishes every 30s, so polling faster than this just
+      // re-reads identical bytes. Kept well under the cadence so a fresh cycle
+      // still shows up promptly.
+      window.setInterval(() => { if (!document.hidden) refresh(); }, 10000);
     })();
   </script>
 </body>
