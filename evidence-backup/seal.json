@@ -1,0 +1,25 @@
+{
+  "code_commit": "39f3d86dd03ccc7640fa1a9e34f40b848b6ea82f",
+  "config": {
+    "fee_per_side": 0.0005,
+    "form": "vote",
+    "members": [
+      28,
+      32,
+      40
+    ],
+    "slippage_bps": 2.0,
+    "spread_bps": 1.0,
+    "symbol": "BTCUSDT",
+    "timeframe": "1d",
+    "vol_target_annual": 0.15
+  },
+  "config_sha256": "f569ed8ef39ae750dc02cd03dff799dab6bf5ab51d1f6e0744ac2fec04c5f3e1",
+  "known_caveats": [
+    "the ensemble family was added after preview OOS numbers, so the decision to add it was not blind",
+    "in-sample ranking has no measured skill; this is exactly why the config is frozen rather than re-tuned"
+  ],
+  "rationale": "ts_ens_vote_vt15 - selected by in-sample Sharpe on both BTC and ETH; passes the repo gate on the BTC OOS split, but the rolling selection study showed the SELECTION procedure has no skill (3/6 windows, p=1.0). Frozen here so a forward-time test can settle it.",
+  "sealed_after_ts_ms": 1790506406933,
+  "sealed_at": "2026-09-27T10:53:26.933630+00:00"
+}

@@ -1,0 +1,26 @@
+{
+  "taken_at": "2026-10-02T20:37:06.469928+00:00",
+  "source": "/Users/a/trading/openalice-fleet/research/strategy-search/holdout",
+  "files": {
+    "seal.json": {
+      "present": true,
+      "sha256": "bd3d955773c1f09e12d929640195f65344983160f5ef7c568171e5b75fb07ab2",
+      "bytes": 1004
+    },
+    "bars.jsonl": {
+      "present": true,
+      "sha256": "323f03bdb5b3fa63c8e7309b6ebb0b948806542eec582313b469d02fae521a6c",
+      "bytes": 385
+    },
+    "results.jsonl": {
+      "present": true,
+      "sha256": "3ccdae803470de10f5383d0da262c31022f75d85a82594792823112e35d2f140",
+      "bytes": 3130
+    },
+    "chain.json": {
+      "present": true,
+      "sha256": "deddb6f305c8eacaf7f0c1f948e75ec04c95ab9d2001e8426cfa01736a8e7636",
+      "bytes": 177
+    }
+  }
+}

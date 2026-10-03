@@ -1,0 +1,10 @@
+{
+  "taken_at": "2026-10-02T22:53:06.472751+00:00",
+  "source": "/Users/a/trading/openalice/fleet-state/tournament.json",
+  "source_sha256": "1d6ba1b8aed5c29b0e0b2badd6d32efeb6bae47959b83b73d87089a3099881ac",
+  "snapshot": "tournament.json",
+  "snapshot_sha256": "1d6ba1b8aed5c29b0e0b2badd6d32efeb6bae47959b83b73d87089a3099881ac",
+  "bytes": 89832,
+  "attempts": 1,
+  "invariants": "checked: JSON parses, carry books numeric, equity == start + collected - fees"
+}
