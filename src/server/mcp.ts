@@ -8,7 +8,8 @@ import type { ToolCenter } from '../core/tool-center.js'
 import { type WorkspaceToolCenter, makeWorkspaceResolver } from '../core/workspace-tool-center.js'
 import type { IInboxStore } from '../core/inbox-store.js'
 import type { IEntityStore } from '../core/entity-store.js'
-import type { WorkspaceService } from '../workspaces/service.js'
+import { runBacktest } from '../services/backtest/index.js'
+import { type WorkspaceService } from '../workspaces/service.js'
 import { extractMcpShape, wrapToolExecute } from '../core/mcp-export.js'
 import { registerCliRoutes } from './cli.js'
 
@@ -115,6 +116,13 @@ export class McpPlugin implements Plugin {
       allowHeaders: ['Content-Type', 'mcp-session-id', 'Last-Event-ID', 'mcp-protocol-version'],
       exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
     }))
+
+    /** Backtest route — will compute result on route hit */
+    app.post('/strategy/sma-crossover', async (c) => {
+      const body = await c.req.json()
+      const result = await runBacktest(body.symbol ?? 'BTC-PERP', body.params ?? { fee: 0.001, slippage: 0.0005 })
+      return c.json(result)
+    })
 
     app.all('/mcp', async (c) => {
       const transport = new WebStandardStreamableHTTPServerTransport()

@@ -102,7 +102,7 @@ const apiKeysSchema = z.object({
 
 export const credentialVendorEnum = z.enum([
   'anthropic', 'openai', 'google',
-  'minimax', 'glm', 'kimi', 'deepseek', 'custom',
+  'minimax', 'glm', 'kimi', 'deepseek', 'custom', 'nvidia',
 ])
 export type CredentialVendor = z.infer<typeof credentialVendorEnum>
 
@@ -294,6 +294,10 @@ const mcpSchema = z.object({
   port: z.number().int().positive().default(3001),
 }).default({ port: 3001 })
 
+const nimBridgeSchema = z.object({
+  port: z.number().int().positive().default(19593),
+}).default({ port: 19593 })
+
 const connectorsSchema = z.object({
   web: z.object({ port: z.number().int().positive().default(3002) }).default({ port: 3002 }),
   mcpAsk: z.object({
@@ -428,6 +432,7 @@ export type Config = {
   snapshot: z.infer<typeof snapshotSchema>
   trading: z.infer<typeof tradingSchema>
   mcp: z.infer<typeof mcpSchema>
+  nimBridge: z.infer<typeof nimBridgeSchema>
   connectors: z.infer<typeof connectorsSchema>
   news: z.infer<typeof newsCollectorSchema>
   tools: z.infer<typeof toolsSchema>
@@ -469,7 +474,7 @@ export async function loadConfig(): Promise<Config> {
   // is pending. See src/migrations/INDEX.md for the full list.
   await runMigrations()
 
-  const files = ['engine.json', 'agent.json', 'crypto.json', 'securities.json', 'market-data.json', 'compaction.json', 'ai-provider-manager.json', 'snapshot.json', 'mcp.json', 'connectors.json', 'news.json', 'tools.json', 'webhook.json', 'trading.json'] as const
+  const files = ['engine.json', 'agent.json', 'crypto.json', 'securities.json', 'market-data.json', 'compaction.json', 'ai-provider-manager.json', 'snapshot.json', 'mcp.json', 'nim-bridge.json', 'connectors.json', 'news.json', 'tools.json', 'webhook.json', 'trading.json'] as const
   const raws = await Promise.all(files.map((f) => loadJsonFile(f)))
 
   const config: Config = {
@@ -482,11 +487,12 @@ export async function loadConfig(): Promise<Config> {
     aiProvider:    await parseAndSeed(files[6], aiProviderSchema, raws[6]),
     snapshot:      await parseAndSeed(files[7], snapshotSchema, raws[7]),
     mcp:           await parseAndSeed(files[8], mcpSchema, raws[8]),
-    connectors:    await parseAndSeed(files[9], connectorsSchema, raws[9]),
-    news:          await parseAndSeed(files[10], newsCollectorSchema, raws[10]),
-    tools:         await parseAndSeed(files[11], toolsSchema, raws[11]),
-    webhook:       await parseAndSeed(files[12], webhookSchema, raws[12]),
-    trading:       await parseAndSeed(files[13], tradingSchema, raws[13]),
+    nimBridge:     await parseAndSeed(files[9], nimBridgeSchema, raws[9]),
+    connectors:    await parseAndSeed(files[10], connectorsSchema, raws[10]),
+    news:          await parseAndSeed(files[11], newsCollectorSchema, raws[11]),
+    tools:         await parseAndSeed(files[12], toolsSchema, raws[12]),
+    webhook:       await parseAndSeed(files[13], webhookSchema, raws[13]),
+    trading:       await parseAndSeed(files[14], tradingSchema, raws[14]),
   }
 
   // Spawn-time-fixed channel: when guardian (Electron main) spawns the
@@ -499,6 +505,9 @@ export async function loadConfig(): Promise<Config> {
   if (envWebPort !== null) config.connectors.web.port = envWebPort
   const envMcpPort = parseEnvPort(process.env['OPENALICE_MCP_PORT'])
   if (envMcpPort !== null) config.mcp.port = envMcpPort
+
+  const envNimBridgePort = parseEnvPort(process.env['OPENALICE_NIM_BRIDGE_PORT'])
+  if (envNimBridgePort !== null) config.nimBridge.port = envNimBridgePort
 
   return config
 }
