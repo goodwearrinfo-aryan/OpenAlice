@@ -51,6 +51,12 @@
   <thead><tr><th>#</th><th>STRATEGY</th><th>TYPE</th><th>POS</th><th class="r">RETURN</th><th class="r">WIN%</th><th class="r">CYC</th></tr></thead>
   <tbody id="board"><tr><td colspan="7" class="dim">connecting feed…</td></tr></tbody>
 </table>
+<div class="sect" style="border-left-color:var(--cyan)">Strategies-10 — 1h BTC/ETH/SOL · no-lookahead · 5bps/side fees
+  <span id="s10meta" class="tag" style="margin-left:10px"></span></div>
+<table>
+  <thead><tr><th>#</th><th>STRATEGY</th><th>TYPE</th><th>POS</th><th class="r">WINDOW</th><th class="r">FWD</th><th class="r">WIN%</th><th class="r">TRD</th><th class="r">MAXDD</th></tr></thead>
+  <tbody id="s10"><tr><td colspan="9" class="dim">waiting for strategies10.json — run oa_strategies10.py --emit ui/public/strategies10.json</td></tr></tbody>
+</table>
 <div class="foot">
   <span>STATUS <b id="leader">—</b></span>
   <span>LLM = AI-decided (real model) · EDGE = structural (real +EV) · DIR = directional (coin-flip)</span>
@@ -81,7 +87,26 @@ async function tick(){
       <td class="r dim">${b.cyc}</td>
     </tr>`).join('');
 }
+async function tick10(){
+  let d; try{ d=await (await fetch('/strategies10.json?_='+Date.now())).json(); }catch(e){ return; }
+  const pos=p=>p==='flat'?'<span class="pillF">FLAT</span>':`<span class="${/^S/.test(p)?'pillS':'pill'}">${p}</span>`;
+  document.getElementById('s10meta').textContent=
+    `${d.source} · ${d.window_d}d window · BTC buy&hold ${f2(d.bh_pct)} · FWD = since ${new Date(d.applied).toISOString().slice(0,16).replace('T',' ')}Z`;
+  document.getElementById('s10').innerHTML=d.board.map((b,i)=>`
+    <tr class="${i===0?'lead':''}">
+      <td class="rk">${String(i+1).padStart(2,'0')}</td>
+      <td class="nm">${b.name} <span class="tag">${b.tag}</span></td>
+      <td><span class="${b.type==='EDGE'?'EDGE':'DIR'}">${b.type}</span></td>
+      <td>${pos(b.pos)}</td>
+      <td class="r ${cls(b.ret_pct)}">${f2(b.ret_pct)}</td>
+      <td class="r ${cls(b.fwd_pct)}">${f2(b.fwd_pct)}</td>
+      <td class="r">${b.winpct.toFixed(1)}</td>
+      <td class="r dim">${b.trades}</td>
+      <td class="r dim">${b.dd_pct.toFixed(1)}%</td>
+    </tr>`).join('');
+}
 tick(); setInterval(tick,3000);
+tick10(); setInterval(tick10,30000);
 </script>
 </body>
 </html>

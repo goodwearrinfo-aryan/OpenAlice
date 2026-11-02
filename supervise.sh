@@ -53,5 +53,15 @@ DEV=$!
   done
 ) &
 
+# 10-strategy race feed (oa_strategies10.py -> ui/public/strategies10.json), refreshed
+# every 5 min while the backend lives. Data source auto-falls-back across exchanges.
+(
+  cd "$APP" || exit 0
+  while kill -0 "$DEV" 2>/dev/null; do
+    python3 oa_strategies10.py --emit ui/public/strategies10.json >> /tmp/oa_strategies10.log 2>&1
+    sleep 300
+  done
+) &
+
 wait "$DEV"
 echo "[supervise] $(date) pnpm dev exited — launchd will restart" >> "$LOG"
